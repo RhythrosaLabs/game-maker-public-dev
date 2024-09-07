@@ -6,8 +6,6 @@ import zipfile
 from io import BytesIO
 from PIL import Image
 import replicate
-import random
-import subprocess
 
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
@@ -27,7 +25,6 @@ if 'customization' not in st.session_state:
         'script_count': {'Player': 1, 'Enemy': 1, 'Game Object': 3, 'Level Background': 1},
         'use_replicate': {'convert_to_3d': False, 'generate_music': False},
         'code_types': {'unity': False, 'unreal': False, 'blender': False},
-        'blender_fbx': False,
         'generate_elements': {
             'game_concept': True,
             'world_concept': True,
@@ -39,7 +36,6 @@ if 'customization' not in st.session_state:
             'level_design': False
         }
     }
-
 
 # Load API keys from a file
 def load_api_keys():
@@ -64,7 +60,7 @@ def get_openai_headers():
 # Generate content using OpenAI API
 def generate_content(prompt, role):
     data = {
-        "model": "gpt-4o-mini",
+        "model": "gpt-4",
         "messages": [
             {"role": "system", "content": f"You are a highly skilled assistant specializing in {role}. Provide detailed, creative, and well-structured responses."},
             {"role": "user", "content": prompt}
@@ -210,44 +206,6 @@ def generate_scripts(customization, game_concept):
     
     return scripts
 
-def generate_blender_fbx(blender_script, output_path):
-    # Write the Blender script to a temporary file
-    temp_script_path = "temp_blender_script.py"
-    with open(temp_script_path, "w") as f:
-        f.write(blender_script)
-    
-    # Append FBX export commands to the script
-    with open(temp_script_path, "a") as f:
-        f.write(f"""
-import bpy
-
-# Ensure we're in object mode
-bpy.ops.object.mode_set(mode='OBJECT')
-
-# Select all objects
-bpy.ops.object.select_all(action='SELECT')
-
-# Export as FBX
-bpy.ops.export_scene.fbx(filepath="{output_path}", use_selection=True)
-""")
-    
-    # Run Blender in background mode to execute the script
-    blender_command = [
-        "blender",
-        "--background",
-        "--python", temp_script_path
-    ]
-    
-    try:
-        subprocess.run(blender_command, check=True, capture_output=True, text=True)
-        print(f"FBX file generated successfully at {output_path}")
-    except subprocess.CalledProcessError as e:
-        print(f"Error generating FBX file: {e}")
-        print(f"Blender output: {e.output}")
-    finally:
-        # Clean up the temporary script file
-        os.remove(temp_script_path)
-
 # Generate additional game elements
 def generate_additional_elements(game_concept, elements_to_generate):
     additional_elements = {}
@@ -351,7 +309,7 @@ with about_tab:
     Key features:
     - Generate game concepts, world designs, and character ideas
     - Create game assets including images and scripts for Unity, Unreal, and Blender
-    - Optional 3D model conversion, music generation, and Blender FBX export
+    - Optional 3D model conversion and music generation
     - Customizable content generation for various game elements
     
     Powered by OpenAI's GPT-4 and DALL-E 3, plus various Replicate AI models.
@@ -380,14 +338,11 @@ for script_type in st.session_state.customization['script_types']:
         value=st.session_state.customization['script_count'][script_type]
     )
 
-# When setting checkbox values, use .get() method to avoid KeyError
-st.session_state.customization['code_types']['unity'] = st.checkbox("Generate Unity C# Scripts", value=st.session_state.customization['code_types'].get('unity', False))
-st.session_state.customization['code_types']['unreal'] = st.checkbox("Generate Unreal Engine C++ Scripts", value=st.session_state.customization['code_types'].get('unreal', False))
-blender_col, fbx_col = st.columns([3, 2])
-with blender_col:
-    st.session_state.customization['code_types']['blender'] = st.checkbox("Generate Blender Python Scripts", value=st.session_state.customization['code_types'].get('blender', False))
-with fbx_col:
-    st.session_state.customization['blender_fbx'] = st.checkbox("Export FBX", disabled=not st.session_state.customization['code_types']['blender'], value=st.session_state.customization.get('blender_fbx', False))
+# Code Type Selection
+st.subheader("Code Type Selection")
+st.session_state.customization['code_types']['unity'] = st.checkbox("Generate Unity C# Scripts")
+st.session_state.customization['code_types']['unreal'] = st.checkbox("Generate Unreal Engine C++ Scripts")
+st.session_state.customization['code_types']['blender'] = st.checkbox("Generate Blender Python Scripts")
 
 # Replicate Options
 st.subheader("Replicate Options")
@@ -463,16 +418,6 @@ if st.button("Generate Game Plan"):
             # Add scripts
             for script_name, script_code in game_plan['scripts'].items():
                 zip_file.writestr(script_name, script_code)
-                
-                # Generate FBX for Blender scripts if option is selected
-                if st.session_state.customization['blender_fbx'] and script_name.startswith('blender_'):
-                    fbx_name = script_name.replace('.py', '.fbx')
-                    fbx_path = os.path.join(os.getcwd(), fbx_name)
-                    generate_blender_fbx(script_code, fbx_path)
-                    if os.path.exists(fbx_path):
-                        with open(fbx_path, 'rb') as fbx_file:
-                            zip_file.writestr(fbx_name, fbx_file.read())
-                        os.remove(fbx_path)
             
             # Add additional elements
             if 'additional_elements' in game_plan:
