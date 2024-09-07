@@ -610,44 +610,41 @@ with st.expander("Help & FAQ"):
 3. **What do I need to get started?**  
    You'll need a game idea and API keys for OpenAI and Replicate. You can enter them in the sidebar (to the left).
 
-## Using the Tool
+## Usage
 
-4. **How do I use this tool?**  
+4. **How do I use this?**  
    - Start by entering your game concept under the "Game Concept" tab.
    - Customize asset generation and script generation in the relevant tabs.
    - Click 'Generate Game Plan' to create your game concept, images, scripts, and additional elements.
 
-5. **What if I don’t like the generated results?**  
-   You can tweak inputs or regenerate specific assets by adjusting options and rerunning the generation.
-
-6. **Can I edit the generated content?**  
+5. **Can I edit the generated content?**  
    Yes, all generated content is editable and meant to be customized to fit your specific needs.
 
 ## Game Assets
 
-7. **What game assets can this tool generate?**  
+6. **What game assets can this tool generate?**  
    You can generate:
    - **Images:** Characters, enemies, backgrounds, objects, textures, sprites, and UI elements.
    - **Scripts:** Code for Unity, Unreal Engine, or Blender.
    - **Music:** Background music for your game using AI music generation models.
    - **Additional Text:** Game concepts, storylines, character backgrounds, etc.
 
-8. **What image models are available?**  
+7. **What image models are available?**  
    The tool supports models such as OpenAI’s DALL·E 3, SDXL, and MidJourney to create game images based on your prompts.
 
-9. **Can I create 3D models?**  
+8. **Can I create 3D models?**  
    Yes, you can convert 2D images to 3D models using Replicate's Wonder3D model. While this feature is still evolving, it provides basic 3D representations of selected assets.
 
 ## Scripts and Code
 
-10. **What kinds of scripts can this tool generate?**  
+9. **What kinds of scripts can this tool generate?**  
    You can generate:
    - **Player Character scripts** (WASD movement, jumping, attacking).
    - **Enemy AI scripts** (pathfinding, attack mechanics).
    - **Object interaction scripts** (collectibles, traps).
    - **Background management scripts** (parallax scrolling, day/night cycles).
 
-11. **What programming languages are supported?**  
+10. **What programming languages are supported?**  
    You can generate scripts in:
    - **C# for Unity**
    - **C++ for Unreal Engine**
@@ -655,23 +652,20 @@ with st.expander("Help & FAQ"):
 
 ## AI Models
 
-12. **What AI models are used for generating content?**  
+11. **What AI models are used for generating content?**  
     - **Chat Models:** GPT-4, GPT-3.5-turbo, Llama 2 for text generation such as game concepts and scripts.
     - **Image Models:** DALL-E 3, SDXL, Midjourney for creating visual assets.
     - **Music Models:** Replicate's MusicGen model for background music generation.
 
 ## Troubleshooting
 
-13. **What should I do if I encounter errors?**  
+12. **What should I do if I encounter errors?**  
     - Double-check your API keys.
     - Ensure your internet connection is stable.
     - Retry generating the content, or try using different models.
 
-14. **Why does content generation take time?**  
+13. **Why does content generation take time?**  
     The time taken depends on the complexity of the content and the AI models being used. Complex game plans or large assets may take a few minutes.
-
-15. **Can I download all the generated assets?**  
-    Yes, after the game plan is generated, you can download a ZIP file containing all assets, scripts, and other content.
  """)
 
 # Footer
