@@ -9,8 +9,6 @@ import replicate
 
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
-DALLE_API_URL = "https://api.openai.com/v1/images/generations"
-REPLICATE_API_URL = "https://api.replicate.com/v1/predictions"
 API_KEY_FILE = "api_key.json"
 
 # Initialize session state
@@ -23,7 +21,8 @@ if 'customization' not in st.session_state:
         'script_types': ['Player', 'Enemy', 'Game Object', 'Level Background'],
         'image_count': {t: 0 for t in ['Character', 'Enemy', 'Background', 'Object', 'Texture', 'Sprite', 'UI']},
         'script_count': {t: 0 for t in ['Player', 'Enemy', 'Game Object', 'Level Background']},
-        'use_replicate': {'convert_to_3d': False, 'generate_music': False},
+        'use_replicate': {'generate_music': False},
+        'convert_to_3d': {t: False for t in ['Character', 'Enemy', 'Object', 'UI']},
         'code_types': {'unity': False, 'unreal': False, 'blender': False},
         'generate_elements': {
             'game_concept': True,
@@ -81,31 +80,26 @@ def generate_content(prompt, role):
     except requests.RequestException as e:
         return f"Error: Unable to communicate with the OpenAI API: {str(e)}"
 
-# Generate images using OpenAI's DALL-E API
+# Generate images using Replicate's Stable Diffusion
 def generate_image(prompt, size):
-    data = {
-        "model": "dall-e-3",
-        "prompt": prompt,
-        "size": size,
-        "n": 1,
-        "response_format": "url"
-    }
-
+    replicate_client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+    
     try:
-        response = requests.post(DALLE_API_URL, headers=get_openai_headers(), json=data)
-        response.raise_for_status()
-        response_data = response.json()
-        if "data" not in response_data:
-            error_message = response_data.get("error", {}).get("message", "Unknown error")
-            return f"Error: {error_message}"
-
-        if not response_data["data"]:
-            return "Error: No data returned from API."
-
-        image_url = response_data["data"][0]["url"]
-        return image_url
-
-    except requests.RequestException as e:
+        output = replicate_client.run(
+            "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
+            input={
+                "prompt": prompt,
+                "width": size[0],
+                "height": size[1],
+                "num_outputs": 1,
+                "scheduler": "K_EULER",
+                "num_inference_steps": 50,
+                "guidance_scale": 7.5,
+                "prompt_strength": 0.8,
+            }
+        )
+        return output[0] if output else None
+    except Exception as e:
         return f"Error: Unable to generate image: {str(e)}"
 
 # Convert image to 3D model using Replicate API
@@ -114,10 +108,14 @@ def convert_image_to_3d(image_url):
     
     try:
         output = replicate_client.run(
-            "adirik/wonder3d:f7ecac6510cc161e3f2c9457cd164d57d49043d4dcbd261d9b21cd4a07ab9dfe",
-            input={"image": image_url}
+            "cjwbw/shap-e:5957069d5c509126a73c7cb68abcddbb985aeefa4d318e7c63ec1352ce6da68c",
+            input={
+                "input_image": image_url,
+                "render_mode": "nerf",
+                "guidance_scale": 3.0,
+            }
         )
-        return output.get('3d_model')
+        return output['glb'] if output and 'glb' in output else None
     except Exception as e:
         return f"Error: Unable to convert image to 3D model: {str(e)}"
 
@@ -154,13 +152,13 @@ def generate_images(customization, game_concept):
     }
     
     sizes = {
-        'Character': '1024x1024',
-        'Enemy': '1024x1024',
-        'Background': '1792x1024',
-        'Object': '1024x1024',
-        'Texture': '1024x1024',
-        'Sprite': '1024x1024',
-        'UI': '1024x1024'
+        'Character': (1024, 1024),
+        'Enemy': (1024, 1024),
+        'Background': (1792, 1024),
+        'Object': (1024, 1024),
+        'Texture': (512, 512),
+        'Sprite': (1024, 1024),
+        'UI': (1024, 1024)
     }
 
     for img_type in customization['image_types']:
@@ -168,10 +166,14 @@ def generate_images(customization, game_concept):
             prompt = f"{image_prompts[img_type]} The design should fit the following game concept: {game_concept}. Variation {i + 1}"
             size = sizes[img_type]
             image_url = generate_image(prompt, size)
-            if customization['use_replicate']['convert_to_3d'] and img_type in ['Character', 'Enemy', 'Object']:
-                model_url = convert_image_to_3d(image_url)
-                images[f"{img_type.lower()}_3d_model_{i + 1}"] = model_url
-            images[f"{img_type.lower()}_image_{i + 1}"] = image_url
+            if image_url and not image_url.startswith('Error'):
+                images[f"{img_type.lower()}_image_{i + 1}"] = image_url
+                if customization['convert_to_3d'].get(img_type, False):
+                    model_url = convert_image_to_3d(image_url)
+                    if model_url and not model_url.startswith('Error'):
+                        images[f"{img_type.lower()}_3d_model_{i + 1}"] = model_url
+            else:
+                images[f"{img_type.lower()}_image_{i + 1}"] = image_url
 
     return images
 
@@ -284,8 +286,6 @@ st.title("Automate Your Game Dev")
 st.header("Game Concept")
 user_prompt = st.text_area("Describe your game concept", "Enter a detailed description of your game here...")
 
-# Streamlit app layout (continued)
-
 # Sidebar
 st.sidebar.title("Settings")
 
@@ -313,7 +313,7 @@ with about_tab:
     - Optional 3D model conversion and music generation
     - Customizable content generation for various game elements
     
-    Powered by OpenAI's GPT-4 and DALL-E 3, plus various Replicate AI models.
+    Powered by OpenAI's GPT-4 and Replicate's Stable Diffusion and other AI models.
     
     Created by [Your Name/Company]. For support, contact: support@example.com
     """)
@@ -324,11 +324,16 @@ st.header("Customization")
 # Image Customization
 st.subheader("Image Customization")
 for img_type in st.session_state.customization['image_types']:
-    st.session_state.customization['image_count'][img_type] = st.number_input(
-        f"Number of {img_type} Images", 
-        min_value=0, 
-        value=st.session_state.customization['image_count'][img_type]
-    )
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.session_state.customization['image_count'][img_type] = st.number_input(
+            f"Number of {img_type} Images", 
+            min_value=0, 
+            value=st.session_state.customization['image_count'][img_type]
+        )
+    with col2:
+        if img_type in ['Character', 'Enemy', 'Object', 'UI']:
+            st.session_state.customization['convert_to_3d'][img_type] = st.checkbox(f"3D {img_type}", value=st.session_state.customization['convert_to_3d'][img_type])
 
 # Script Customization
 st.subheader("Script Customization")
@@ -347,7 +352,6 @@ st.session_state.customization['code_types']['blender'] = st.checkbox("Generate 
 
 # Replicate Options
 st.subheader("Replicate Options")
-st.session_state.customization['use_replicate']['convert_to_3d'] = st.checkbox("Convert Images to 3D")
 st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Music")
 
 # Additional Elements Selection
@@ -434,14 +438,14 @@ if st.button("Generate Game Plan"):
                     zip_file.writestr(f"{element_name}.txt", element_content)
             
             # Add music if generated
-            if st.session_state.customization['use_replicate']['generate_music'] and 'music' in game_plan:
+            if 'music' in game_plan:
                 music_response = requests.get(game_plan['music'])
                 zip_file.writestr("background_music.mp3", music_response.content)
 
         st.download_button("Download ZIP of Assets and Scripts", zip_buffer.getvalue(), file_name="game_plan.zip")
 
         # Display generated music if applicable
-        if st.session_state.customization['use_replicate']['generate_music'] and 'music' in game_plan:
+        if 'music' in game_plan:
             st.subheader("Generated Music")
             st.audio(game_plan['music'], format='audio/mp3')
 
