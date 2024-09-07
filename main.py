@@ -37,7 +37,7 @@ if 'customization' not in st.session_state:
             'level_design': False
         },
         'image_model': 'dall-e-3',
-        'chat_model': 'gpt-4',
+        'chat_model': 'gpt-4o-mini',
     }
 
 # Load API keys from a file
@@ -62,7 +62,7 @@ def get_openai_headers():
 
 # Generate content using selected chat model
 def generate_content(prompt, role):
-    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-3.5-turbo']:
+    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4o-mini']:
         data = {
             "model": st.session_state.customization['chat_model'],
             "messages": [
@@ -406,18 +406,35 @@ with st.sidebar:
             st.session_state.api_keys['replicate'] = replicate_key
             st.success("API Keys saved successfully!")
 
-    # Model Selection
-    st.markdown("### AI Model Selection")
-    st.session_state.customization['chat_model'] = st.selectbox(
-        "Select Chat Model",
-        options=['gpt-4', 'gpt-3.5-turbo', 'llama'],
-        index=0
-    )
-    st.session_state.customization['image_model'] = st.selectbox(
-        "Select Image Generation Model",
-        options=['dall-e-3', 'sdxl', 'midjourney'],
-        index=0
-    )
+    ## Model Selection
+st.subheader("AI Model Selection")
+st.session_state.customization['chat_model'] = st.selectbox(
+    "Select Chat Model",
+    options=[
+        'gpt-4',
+        'gpt-4o-mini',
+        'llama',
+        'replicate/llama-2-70b-chat:2c1608e18606fad2812020dc541930f2d0495ce32eee50074220b87300bc16e1',
+        'replicate/vicuna-13b:6282abe6a492de4145d7bb601023762212f9ddbbe78278bd6771c8b3b2f2a13b',
+        'replicate/dolly-v2-12b:ef0e1aefc61f8e096ebe4db6b2bacc297daf2ef6899f0f7e001ec445893500e5',
+        'replicate/koala-13b:c7fc755e5ec27436b5d29923ac738427bdb2c5c03685c36d543d441b8db8fa8d'
+    ],
+    index=0
+)
+
+st.session_state.customization['image_model'] = st.selectbox(
+    "Select Image Generation Model",
+    options=[
+        'dall-e-3',
+        'sdxl',
+        'midjourney',
+        'replicate/stable-diffusion:ac732df83cea7fff18b8472768c88ad041fa750ff7682a21affe81863cbe77e4',
+        'replicate/kandinsky-2:ea1addaab376f4dc227f5368bbd8eff901820fd1cc14ed8cad63b29249e9d463',
+        'replicate/waifu-diffusion:25d2f75ecda0c0bed34c806b7b70319a53a1bccad3ade1a7496524f013f48983',
+        'replicate/openjourney:9936c2001faa2194a261c01381f90e65261879985476014a0a37a334593a05eb'
+    ],
+    index=0
+)
 
     # Replicate Options
     st.markdown("### Additional Options")
@@ -596,8 +613,7 @@ if st.button("Generate Game Plan", key="generate_button"):
 with st.expander("Help & FAQ"):
     st.markdown("""
    
-## Basics
-# Help & Frequently Asked Questions
+## Help & Frequently Asked Questions
 
 ## Basics
 
@@ -643,9 +659,7 @@ with st.expander("Help & FAQ"):
    - **Enemy AI scripts** (pathfinding, attack mechanics).
    - **Object interaction scripts** (collectibles, traps).
    - **Background management scripts** (parallax scrolling, day/night cycles).
-   - **Textures** (terrains, fabrics, etc.)
-   - **UI Elements** (health bars, buttons, etc.)
-   - **Sprites** (a collection if images suitable for animation)
+   - **More**
 
 10. **What programming languages are supported?**  
    You can generate scripts in:
