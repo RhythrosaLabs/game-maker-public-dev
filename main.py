@@ -612,7 +612,7 @@ with st.expander("Help & FAQ"):
 
 4. **How do I use this tool?**
    - Start by entering your game idea in the 'Game Concept' box at the top.
-   - Customize your options in the sidebar (e.g., how many characters you want, what kind of scripts, etc.).
+   - Customize your options in the Asset Generation, Script Generation, and/or Additional Elements tabs (e.g., how many characters you want, what kind of scripts, etc.).
    - Click the 'Generate Game Plan' button.
    - Wait for the AI to create your game elements.
    - Review the results and download your game plan.
