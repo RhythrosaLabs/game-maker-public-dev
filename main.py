@@ -433,8 +433,11 @@ for img_type in st.session_state.customization['image_types']:
         )
     with col2:
         if img_type in ['Character', 'Enemy', 'Object', 'UI']:
-            st.session_state.customization['convert_to_3d'][img_type] = st.checkbox(f"3D {img_type}", value=st.session_state.customization['convert_to_3d'][img_type])
-
+            st.session_state.customization['convert_to_3d'][img_type] = st.checkbox(
+                f"Make 3D (feature not working)",
+                value=st.session_state.customization['convert_to_3d'][img_type],
+                key=f"3d_checkbox_{img_type}"
+            )
 # Script Customization
 st.subheader("Script Customization")
 for script_type in st.session_state.customization['script_types']:
