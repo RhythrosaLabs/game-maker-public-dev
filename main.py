@@ -19,10 +19,10 @@ if 'api_keys' not in st.session_state:
 
 if 'customization' not in st.session_state:
     st.session_state.customization = {
-        'image_types': ['Character', 'Enemy', 'Background', 'Object'],
+        'image_types': ['Character', 'Enemy', 'Background', 'Object', 'Texture', 'Sprite', 'UI'],
         'script_types': ['Player', 'Enemy', 'Game Object', 'Level Background'],
-        'image_count': {'Character': 1, 'Enemy': 1, 'Background': 1, 'Object': 2},
-        'script_count': {'Player': 1, 'Enemy': 1, 'Game Object': 3, 'Level Background': 1},
+        'image_count': {t: 0 for t in ['Character', 'Enemy', 'Background', 'Object', 'Texture', 'Sprite', 'UI']},
+        'script_count': {t: 0 for t in ['Player', 'Enemy', 'Game Object', 'Level Background']},
         'use_replicate': {'convert_to_3d': False, 'generate_music': False},
         'code_types': {'unity': False, 'unreal': False, 'blender': False},
         'generate_elements': {
@@ -110,21 +110,15 @@ def generate_image(prompt, size):
 
 # Convert image to 3D model using Replicate API
 def convert_image_to_3d(image_url):
-    headers = {
-        "Authorization": f"Token {st.session_state.api_keys['replicate']}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "input": {"image": image_url},
-        "model": "adirik/wonder3d"
-    }
-
+    replicate_client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+    
     try:
-        response = requests.post("https://api.replicate.com/v1/predictions", headers=headers, json=data)
-        response.raise_for_status()
-        response_data = response.json()
-        return response_data.get('output', {}).get('url')
-    except requests.RequestException as e:
+        output = replicate_client.run(
+            "adirik/wonder3d:f7ecac6510cc161e3f2c9457cd164d57d49043d4dcbd261d9b21cd4a07ab9dfe",
+            input={"image": image_url}
+        )
+        return output.get('3d_model')
+    except Exception as e:
         return f"Error: Unable to convert image to 3D model: {str(e)}"
 
 # Generate music using Replicate's MusicGen
@@ -132,20 +126,16 @@ def generate_music(prompt):
     replicate_client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
     
     try:
-        input_data = {
-            "prompt": prompt,
-            "model_version": "stereo-large",
-            "output_format": "mp3",
-            "normalization_strategy": "peak"
-        }
-        
         output = replicate_client.run(
             "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
-            input=input_data
+            input={
+                "prompt": prompt,
+                "model_version": "stereo-large",
+                "output_format": "mp3",
+                "normalization_strategy": "peak"
+            }
         )
-        
         return output
-    
     except Exception as e:
         return f"Error: Unable to generate music: {str(e)}"
 
@@ -154,26 +144,33 @@ def generate_images(customization, game_concept):
     images = {}
     
     image_prompts = {
-        'Character': "Create a highly detailed, front-facing character concept art for a 2D game. The character should be in a neutral pose, with clearly defined features and high contrast. The design should be suitable for 3d rigging and for animation, with clear lines and distinct colors.",
-        'Enemy': "Design a menacing, front-facing enemy character concept art for a 2D game. The enemy should have a threatening appearance with distinctive features, and be suitable for 3d rigging and animation. The design should be highly detailed with a clear silhouette, in a neutral pose.",
+        'Character': "Create a highly detailed, front-facing character concept art for a 2D game. The character should be in a neutral pose, with clearly defined features and high contrast. Design for easy game integration with no background, suitable for 3D conversion. The design should have clear lines and distinct colors.",
+        'Enemy': "Design a menacing, front-facing enemy character concept art for a 2D game. The enemy should have a threatening appearance with distinctive features. Create with no background for easy game integration and 3D conversion. The design should be highly detailed with a clear silhouette, in a neutral pose.",
         'Background': "Create a wide, highly detailed background image for a level of the game. The scene should include a clear distinction between foreground, midground, and background elements. The style should be consistent with the theme, with room for character movement in the foreground.",
-        'Object': "Create a detailed object image for a 2D game. The object should be a key item with a transparent background, easily recognizable, and fitting the theme. The design should be clear, with minimal unnecessary details, to ensure it integrates well into the game environment."
+        'Object': "Create a detailed object image for a 2D game. The object should be a key item with a transparent background, easily recognizable, and fitting the theme. Design for easy game integration and potential 3D conversion. The design should be clear, with minimal unnecessary details.",
+        'Texture': "Generate a seamless texture pattern suitable for use in a 2D game. The texture should be tileable and have a resolution of 512x512 pixels. Ensure the pattern is consistent and doesn't have visible seams when tiled.",
+        'Sprite': "Create a game sprite sheet with multiple animation frames for a character or object. The sprite should be designed with a transparent background, clear silhouette, and distinct frames for easy animation in a 2D game engine.",
+        'UI': "Design a user interface element for a 2D game. This could be a button, icon, health bar, or menu background. Ensure the design is clean, intuitive, and fits the game's overall aesthetic. Create with a transparent background for easy integration."
     }
     
     sizes = {
-        'Character': '1024x1792',
-        'Enemy': '1024x1792',
+        'Character': '1024x1024',
+        'Enemy': '1024x1024',
         'Background': '1792x1024',
-        'Object': '1024x1024'
+        'Object': '1024x1024',
+        'Texture': '1024x1024',
+        'Sprite': '1024x1024',
+        'UI': '1024x1024'
     }
 
     for img_type in customization['image_types']:
-        for i in range(customization['image_count'].get(img_type, 1)):
+        for i in range(customization['image_count'].get(img_type, 0)):
             prompt = f"{image_prompts[img_type]} The design should fit the following game concept: {game_concept}. Variation {i + 1}"
             size = sizes[img_type]
             image_url = generate_image(prompt, size)
-            if customization['use_replicate']['convert_to_3d'] and img_type != 'Background':
-                image_url = convert_image_to_3d(image_url)
+            if customization['use_replicate']['convert_to_3d'] and img_type in ['Character', 'Enemy', 'Object']:
+                model_url = convert_image_to_3d(image_url)
+                images[f"{img_type.lower()}_3d_model_{i + 1}"] = model_url
             images[f"{img_type.lower()}_image_{i + 1}"] = image_url
 
     return images
@@ -189,7 +186,7 @@ def generate_scripts(customization, game_concept):
     
     scripts = {}
     for script_type in customization['script_types']:
-        for i in range(customization['script_count'].get(script_type, 1)):
+        for i in range(customization['script_count'].get(script_type, 0)):
             desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
             
             if customization['code_types']['unity']:
@@ -257,12 +254,14 @@ def generate_game_plan(user_prompt, customization):
         game_plan['plot'] = generate_content(f"Create a plot for the 2D game based on the world and characters of the game: {game_plan.get('world_concept', '')} and {game_plan.get('character_concepts', '')}.", "plot development")
     
     # Generate images
-    update_status("Generating game images...", 0.5)
-    game_plan['images'] = generate_images(customization, game_plan.get('game_concept', ''))
+    if any(customization['image_count'].values()):
+        update_status("Generating game images...", 0.5)
+        game_plan['images'] = generate_images(customization, game_plan.get('game_concept', ''))
     
     # Generate scripts
-    update_status("Writing game scripts...", 0.7)
-    game_plan['scripts'] = generate_scripts(customization, game_plan.get('game_concept', ''))
+    if any(customization['script_count'].values()):
+        update_status("Writing game scripts...", 0.7)
+        game_plan['scripts'] = generate_scripts(customization, game_plan.get('game_concept', ''))
     
     # Generate additional elements
     update_status("Creating additional game elements...", 0.8)
@@ -284,6 +283,8 @@ st.title("Automate Your Game Dev")
 # Move game concept input to the top
 st.header("Game Concept")
 user_prompt = st.text_area("Describe your game concept", "Enter a detailed description of your game here...")
+
+# Streamlit app layout (continued)
 
 # Sidebar
 st.sidebar.title("Settings")
@@ -325,7 +326,7 @@ st.subheader("Image Customization")
 for img_type in st.session_state.customization['image_types']:
     st.session_state.customization['image_count'][img_type] = st.number_input(
         f"Number of {img_type} Images", 
-        min_value=1, 
+        min_value=0, 
         value=st.session_state.customization['image_count'][img_type]
     )
 
@@ -334,7 +335,7 @@ st.subheader("Script Customization")
 for script_type in st.session_state.customization['script_types']:
     st.session_state.customization['script_count'][script_type] = st.number_input(
         f"Number of {script_type} Scripts", 
-        min_value=1, 
+        min_value=0, 
         value=st.session_state.customization['script_count'][script_type]
     )
 
@@ -380,16 +381,19 @@ if st.button("Generate Game Plan"):
             st.subheader("Plot")
             st.write(game_plan['plot'])
 
-        st.subheader("Assets")
-        st.write("### Images")
-        for img_name, img_url in game_plan['images'].items():
-            st.write(f"{img_name}: [View Image]({img_url})")
-            if st.session_state.customization['use_replicate']['convert_to_3d'] and 'background' not in img_name.lower():
-                st.write(f"3D Model: [View 3D Model]({convert_image_to_3d(img_url)})")
-        
-        st.write("### Scripts")
-        for script_name, script_code in game_plan['scripts'].items():
-            st.write(f"{script_name}:\n```\n{script_code}\n```")
+        if 'images' in game_plan:
+            st.subheader("Assets")
+            st.write("### Images")
+            for img_name, img_url in game_plan['images'].items():
+                if '3d_model' in img_name:
+                    st.write(f"{img_name}: [View 3D Model]({img_url})")
+                else:
+                    st.write(f"{img_name}: [View Image]({img_url})")
+
+        if 'scripts' in game_plan:
+            st.write("### Scripts")
+            for script_name, script_code in game_plan['scripts'].items():
+                st.write(f"{script_name}:\n```\n{script_code}\n```")
 
         if 'additional_elements' in game_plan:
             st.subheader("Additional Game Elements")
@@ -405,19 +409,24 @@ if st.button("Generate Game Plan"):
                 if key in game_plan:
                     zip_file.writestr(f"{key}.txt", game_plan[key])
             
-            # Add images
-            for img_name, img_url in game_plan['images'].items():
-                if img_url.startswith('http'):
-                    img_response = requests.get(img_url)
-                    img = Image.open(BytesIO(img_response.content))
-                    img_file_name = f"{img_name}.png"
-                    with BytesIO() as img_buffer:
-                        img.save(img_buffer, format='PNG')
-                        zip_file.writestr(img_file_name, img_buffer.getvalue())
+            # Add images and 3D models
+            if 'images' in game_plan:
+                for asset_name, asset_url in game_plan['images'].items():
+                    if asset_url.startswith('http'):
+                        asset_response = requests.get(asset_url)
+                        if '3d_model' in asset_name:
+                            zip_file.writestr(f"{asset_name}.glb", asset_response.content)
+                        else:
+                            img = Image.open(BytesIO(asset_response.content))
+                            img_file_name = f"{asset_name}.png"
+                            with BytesIO() as img_buffer:
+                                img.save(img_buffer, format='PNG')
+                                zip_file.writestr(img_file_name, img_buffer.getvalue())
             
             # Add scripts
-            for script_name, script_code in game_plan['scripts'].items():
-                zip_file.writestr(script_name, script_code)
+            if 'scripts' in game_plan:
+                for script_name, script_code in game_plan['scripts'].items():
+                    zip_file.writestr(script_name, script_code)
             
             # Add additional elements
             if 'additional_elements' in game_plan:
