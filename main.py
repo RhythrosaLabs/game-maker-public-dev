@@ -620,4 +620,4 @@ with st.expander("Help & FAQ"):
 
 # Footer
 st.markdown("---")
-st.markdown("Created with ❤️ by Your Company Name. © 2023 All Rights Reserved.")
+st.markdown("Created by Daniel Sheils.")
