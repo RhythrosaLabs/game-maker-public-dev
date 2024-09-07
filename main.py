@@ -608,7 +608,7 @@ with st.expander("Help & FAQ"):
    No, basic game design knowledge helps, but coding is not required. However, generated scripts come with comments, so some understanding can enhance your experience.
 
 3. **What do I need to get started?**  
-   You'll need a game idea and API keys for OpenAI and Replicate, which the app will prompt you to enter.
+   You'll need a game idea and API keys for OpenAI and Replicate. You can enter them in the sidebar (to the left).
 
 ## Using the Tool
 
