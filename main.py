@@ -40,6 +40,7 @@ if 'customization' not in st.session_state:
         }
     }
 
+
 # Load API keys from a file
 def load_api_keys():
     if os.path.exists(API_KEY_FILE):
@@ -379,15 +380,14 @@ for script_type in st.session_state.customization['script_types']:
         value=st.session_state.customization['script_count'][script_type]
     )
 
-# Code Type Selection
-st.subheader("Code Type Selection")
-st.session_state.customization['code_types']['unity'] = st.checkbox("Generate Unity C# Scripts")
-st.session_state.customization['code_types']['unreal'] = st.checkbox("Generate Unreal Engine C++ Scripts")
+# When setting checkbox values, use .get() method to avoid KeyError
+st.session_state.customization['code_types']['unity'] = st.checkbox("Generate Unity C# Scripts", value=st.session_state.customization['code_types'].get('unity', False))
+st.session_state.customization['code_types']['unreal'] = st.checkbox("Generate Unreal Engine C++ Scripts", value=st.session_state.customization['code_types'].get('unreal', False))
 blender_col, fbx_col = st.columns([3, 2])
 with blender_col:
-    st.session_state.customization['code_types']['blender'] = st.checkbox("Generate Blender Python Scripts")
+    st.session_state.customization['code_types']['blender'] = st.checkbox("Generate Blender Python Scripts", value=st.session_state.customization['code_types'].get('blender', False))
 with fbx_col:
-    st.session_state.customization['blender_fbx'] = st.checkbox("Export FBX", disabled=not st.session_state.customization['code_types']['blender'])
+    st.session_state.customization['blender_fbx'] = st.checkbox("Export FBX", disabled=not st.session_state.customization['code_types']['blender'], value=st.session_state.customization.get('blender_fbx', False))
 
 # Replicate Options
 st.subheader("Replicate Options")
