@@ -8,7 +8,6 @@ from PIL import Image
 import replicate
 import random
 import subprocess
-import bpy
 
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
