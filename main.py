@@ -200,6 +200,7 @@ def generate_music(prompt):
         return f"Error: Unable to generate music: {str(e)}"
 
 # Generate multiple images based on customization settings
+# Update the sizes dictionary in the generate_images function
 def generate_images(customization, game_concept):
     images = {}
     
@@ -214,13 +215,13 @@ def generate_images(customization, game_concept):
     }
     
     sizes = {
-        'Character': (1024, 1024),
-        'Enemy': (1024, 1024),
-        'Background': (1792, 1024),
+        'Character': (768, 1024),
+        'Enemy': (768, 1024),
+        'Background': (1024, 768),
         'Object': (1024, 1024),
         'Texture': (512, 512),
-        'Sprite': (1024, 1024),
-        'UI': (1024, 1024)
+        'Sprite': (1024, 768),
+        'UI': (1024, 768)
     }
 
     for img_type in customization['image_types']:
@@ -238,6 +239,8 @@ def generate_images(customization, game_concept):
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
 
     return images
+
+# The rest of the code remains unchanged
 
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
