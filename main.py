@@ -438,253 +438,253 @@ st.session_state.customization['image_model'] = st.selectbox(
 
     # Replicate Options
     st.markdown("### Additional Options")
-    st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Music", value=st.session_state.customization['use_replicate']['generate_music'])
-
-# Main content area
-tab1, tab2, tab3, tab4 = st.tabs(["Game Concept", "Asset Generation", "Script Generation", "Additional Elements"])
-
-with tab1:
-    st.markdown('<p class="section-header">Define Your Game</p>', unsafe_allow_html=True)
-    st.markdown('<p class="info-text">Describe your game concept in detail. This will be used as the foundation for generating all other elements.</p>', unsafe_allow_html=True)
-    user_prompt = st.text_area("Game Concept", "Enter a detailed description of your game here...", height=200)
-
-with tab2:
-    st.markdown('<p class="section-header">Asset Generation</p>', unsafe_allow_html=True)
-    st.markdown('<p class="info-text">Customize the types and number of assets you want to generate for your game.</p>', unsafe_allow_html=True)
+        st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Music", value=st.session_state.customization['use_replicate']['generate_music'])
     
-    for img_type in st.session_state.customization['image_types']:
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.session_state.customization['image_count'][img_type] = st.number_input(
-                f"Number of {img_type} Images", 
-                min_value=0, 
-                value=st.session_state.customization['image_count'][img_type]
-            )
-        with col2:
-            if img_type in ['Character', 'Enemy', 'Object', 'UI']:
-                st.session_state.customization['convert_to_3d'][img_type] = st.checkbox(
-                    "Make 3D (feature not working)",
-                    value=st.session_state.customization['convert_to_3d'][img_type],
-                    key=f"3d_checkbox_{img_type}"
+    # Main content area
+    tab1, tab2, tab3, tab4 = st.tabs(["Game Concept", "Asset Generation", "Script Generation", "Additional Elements"])
+    
+    with tab1:
+        st.markdown('<p class="section-header">Define Your Game</p>', unsafe_allow_html=True)
+        st.markdown('<p class="info-text">Describe your game concept in detail. This will be used as the foundation for generating all other elements.</p>', unsafe_allow_html=True)
+        user_prompt = st.text_area("Game Concept", "Enter a detailed description of your game here...", height=200)
+    
+    with tab2:
+        st.markdown('<p class="section-header">Asset Generation</p>', unsafe_allow_html=True)
+        st.markdown('<p class="info-text">Customize the types and number of assets you want to generate for your game.</p>', unsafe_allow_html=True)
+        
+        for img_type in st.session_state.customization['image_types']:
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.session_state.customization['image_count'][img_type] = st.number_input(
+                    f"Number of {img_type} Images", 
+                    min_value=0, 
+                    value=st.session_state.customization['image_count'][img_type]
                 )
-
-with tab3:
-    st.markdown('<p class="section-header">Script Generation</p>', unsafe_allow_html=True)
-    st.markdown('<p class="info-text">Specify the types and number of scripts you need for your game.</p>', unsafe_allow_html=True)
+            with col2:
+                if img_type in ['Character', 'Enemy', 'Object', 'UI']:
+                    st.session_state.customization['convert_to_3d'][img_type] = st.checkbox(
+                        "Make 3D (feature not working)",
+                        value=st.session_state.customization['convert_to_3d'][img_type],
+                        key=f"3d_checkbox_{img_type}"
+                    )
     
-    for script_type in st.session_state.customization['script_types']:
-        st.session_state.customization['script_count'][script_type] = st.number_input(
-            f"Number of {script_type} Scripts", 
-            min_value=0, 
-            value=st.session_state.customization['script_count'][script_type]
-        )
-
-    st.markdown("### Code Type Selection")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.session_state.customization['code_types']['unity'] = st.checkbox("Unity C# Scripts", value=st.session_state.customization['code_types']['unity'])
-    with col2:
-        st.session_state.customization['code_types']['unreal'] = st.checkbox("Unreal C++ Scripts", value=st.session_state.customization['code_types']['unreal'])
-    with col3:
-        st.session_state.customization['code_types']['blender'] = st.checkbox("Blender Python Scripts", value=st.session_state.customization['code_types']['blender'])
-
-with tab4:
-    st.markdown('<p class="section-header">Additional Game Elements</p>', unsafe_allow_html=True)
-    st.markdown('<p class="info-text">Select additional elements to enhance your game design.</p>', unsafe_allow_html=True)
+    with tab3:
+        st.markdown('<p class="section-header">Script Generation</p>', unsafe_allow_html=True)
+        st.markdown('<p class="info-text">Specify the types and number of scripts you need for your game.</p>', unsafe_allow_html=True)
+        
+        for script_type in st.session_state.customization['script_types']:
+            st.session_state.customization['script_count'][script_type] = st.number_input(
+                f"Number of {script_type} Scripts", 
+                min_value=0, 
+                value=st.session_state.customization['script_count'][script_type]
+            )
     
-    col1, col2 = st.columns(2)
-    with col1:
-        st.session_state.customization['generate_elements']['storyline'] = st.checkbox("Detailed Storyline", value=st.session_state.customization['generate_elements']['storyline'])
-        st.session_state.customization['generate_elements']['dialogue'] = st.checkbox("Sample Dialogue", value=st.session_state.customization['generate_elements']['dialogue'])
-    with col2:
-        st.session_state.customization['generate_elements']['game_mechanics'] = st.checkbox("Game Mechanics Description", value=st.session_state.customization['generate_elements']['game_mechanics'])
-        st.session_state.customization['generate_elements']['level_design'] = st.checkbox("Level Design Document", value=st.session_state.customization['generate_elements']['level_design'])
-
-# Generate Game Plan
-if st.button("Generate Game Plan", key="generate_button"):
-    if not st.session_state.api_keys['openai'] or not st.session_state.api_keys['replicate']:
-        st.error("Please enter and save both OpenAI and Replicate API keys.")
-    else:
-        with st.spinner('Generating game plan...'):
-            game_plan = generate_game_plan(user_prompt, st.session_state.customization)
-        st.success('Game plan generated successfully!')
-
-        # Display game plan results
-        st.markdown('<p class="section-header">Generated Game Plan</p>', unsafe_allow_html=True)
-
-        if 'game_concept' in game_plan:
-            st.subheader("Game Concept")
-            st.write(game_plan['game_concept'])
-
-        if 'world_concept' in game_plan:
-            st.subheader("World Concept")
-            st.write(game_plan['world_concept'])
-
-        if 'character_concepts' in game_plan:
-            st.subheader("Character Concepts")
-            st.write(game_plan['character_concepts'])
-
-        if 'plot' in game_plan:
-            st.subheader("Plot")
-            st.write(game_plan['plot'])
-
-        if 'images' in game_plan:
-            st.subheader("Generated Assets")
-            st.write("### Images")
-            for img_name, img_url in game_plan['images'].items():
-                if isinstance(img_url, dict):  # This is a 3D model
-                    st.write(f"{img_name}:")
-                    if img_url.get('glb'):
-                        st.write(f"[View 3D Model (GLB)]({img_url['glb']})")
-                    if img_url.get('obj'):
-                        st.write(f"[View 3D Model (OBJ)]({img_url['obj']})")
-                elif isinstance(img_url, str) and not img_url.startswith('Error'):
-                    display_image(img_url, img_name)
-                else:
-                    st.write(f"{img_name}: {img_url}")
-
-        if 'scripts' in game_plan:
-            st.write("### Scripts")
-            for script_name, script_code in game_plan['scripts'].items():
-                with st.expander(f"View {script_name}"):
-                    st.code(script_code, language='python')
-
-        if 'additional_elements' in game_plan:
-            st.subheader("Additional Game Elements")
-            for element_name, element_content in game_plan['additional_elements'].items():
-                with st.expander(f"View {element_name.capitalize()}"):
-                    st.write(element_content)
-
-        # Save results
-        zip_buffer = BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
-            # Add text documents
-            for key in ['game_concept', 'world_concept', 'character_concepts', 'plot']:
-                if key in game_plan:
-                    zip_file.writestr(f"{key}.txt", game_plan[key])
-            
-            # Add images and 3D models
+        st.markdown("### Code Type Selection")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.session_state.customization['code_types']['unity'] = st.checkbox("Unity C# Scripts", value=st.session_state.customization['code_types']['unity'])
+        with col2:
+            st.session_state.customization['code_types']['unreal'] = st.checkbox("Unreal C++ Scripts", value=st.session_state.customization['code_types']['unreal'])
+        with col3:
+            st.session_state.customization['code_types']['blender'] = st.checkbox("Blender Python Scripts", value=st.session_state.customization['code_types']['blender'])
+    
+    with tab4:
+        st.markdown('<p class="section-header">Additional Game Elements</p>', unsafe_allow_html=True)
+        st.markdown('<p class="info-text">Select additional elements to enhance your game design.</p>', unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.session_state.customization['generate_elements']['storyline'] = st.checkbox("Detailed Storyline", value=st.session_state.customization['generate_elements']['storyline'])
+            st.session_state.customization['generate_elements']['dialogue'] = st.checkbox("Sample Dialogue", value=st.session_state.customization['generate_elements']['dialogue'])
+        with col2:
+            st.session_state.customization['generate_elements']['game_mechanics'] = st.checkbox("Game Mechanics Description", value=st.session_state.customization['generate_elements']['game_mechanics'])
+            st.session_state.customization['generate_elements']['level_design'] = st.checkbox("Level Design Document", value=st.session_state.customization['generate_elements']['level_design'])
+    
+    # Generate Game Plan
+    if st.button("Generate Game Plan", key="generate_button"):
+        if not st.session_state.api_keys['openai'] or not st.session_state.api_keys['replicate']:
+            st.error("Please enter and save both OpenAI and Replicate API keys.")
+        else:
+            with st.spinner('Generating game plan...'):
+                game_plan = generate_game_plan(user_prompt, st.session_state.customization)
+            st.success('Game plan generated successfully!')
+    
+            # Display game plan results
+            st.markdown('<p class="section-header">Generated Game Plan</p>', unsafe_allow_html=True)
+    
+            if 'game_concept' in game_plan:
+                st.subheader("Game Concept")
+                st.write(game_plan['game_concept'])
+    
+            if 'world_concept' in game_plan:
+                st.subheader("World Concept")
+                st.write(game_plan['world_concept'])
+    
+            if 'character_concepts' in game_plan:
+                st.subheader("Character Concepts")
+                st.write(game_plan['character_concepts'])
+    
+            if 'plot' in game_plan:
+                st.subheader("Plot")
+                st.write(game_plan['plot'])
+    
             if 'images' in game_plan:
-                for asset_name, asset_url in game_plan['images'].items():
-                    if isinstance(asset_url, dict):  # This is a 3D model
-                        if asset_url.get('glb'):
-                            glb_response = requests.get(asset_url['glb'])
-                            zip_file.writestr(f"{asset_name}.glb", glb_response.content)
-                        if asset_url.get('obj'):
-                            obj_response = requests.get(asset_url['obj'])
-                            zip_file.writestr(f"{asset_name}.obj", obj_response.content)
-                    elif isinstance(asset_url, str) and asset_url.startswith('http'):
-                        img_response = requests.get(asset_url)
-                        img = Image.open(BytesIO(img_response.content))
-                        img_file_name = f"{asset_name}.png"
-                        with BytesIO() as img_buffer:
-                            img.save(img_buffer, format='PNG')
-                            zip_file.writestr(img_file_name, img_buffer.getvalue())
-            
-            # Add scripts
+                st.subheader("Generated Assets")
+                st.write("### Images")
+                for img_name, img_url in game_plan['images'].items():
+                    if isinstance(img_url, dict):  # This is a 3D model
+                        st.write(f"{img_name}:")
+                        if img_url.get('glb'):
+                            st.write(f"[View 3D Model (GLB)]({img_url['glb']})")
+                        if img_url.get('obj'):
+                            st.write(f"[View 3D Model (OBJ)]({img_url['obj']})")
+                    elif isinstance(img_url, str) and not img_url.startswith('Error'):
+                        display_image(img_url, img_name)
+                    else:
+                        st.write(f"{img_name}: {img_url}")
+    
             if 'scripts' in game_plan:
+                st.write("### Scripts")
                 for script_name, script_code in game_plan['scripts'].items():
-                    zip_file.writestr(script_name, script_code)
-            
-            # Add additional elements
+                    with st.expander(f"View {script_name}"):
+                        st.code(script_code, language='python')
+    
             if 'additional_elements' in game_plan:
+                st.subheader("Additional Game Elements")
                 for element_name, element_content in game_plan['additional_elements'].items():
-                    zip_file.writestr(f"{element_name}.txt", element_content)
-            
-            # Add music if generated
+                    with st.expander(f"View {element_name.capitalize()}"):
+                        st.write(element_content)
+    
+            # Save results
+            zip_buffer = BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
+                # Add text documents
+                for key in ['game_concept', 'world_concept', 'character_concepts', 'plot']:
+                    if key in game_plan:
+                        zip_file.writestr(f"{key}.txt", game_plan[key])
+                
+                # Add images and 3D models
+                if 'images' in game_plan:
+                    for asset_name, asset_url in game_plan['images'].items():
+                        if isinstance(asset_url, dict):  # This is a 3D model
+                            if asset_url.get('glb'):
+                                glb_response = requests.get(asset_url['glb'])
+                                zip_file.writestr(f"{asset_name}.glb", glb_response.content)
+                            if asset_url.get('obj'):
+                                obj_response = requests.get(asset_url['obj'])
+                                zip_file.writestr(f"{asset_name}.obj", obj_response.content)
+                        elif isinstance(asset_url, str) and asset_url.startswith('http'):
+                            img_response = requests.get(asset_url)
+                            img = Image.open(BytesIO(img_response.content))
+                            img_file_name = f"{asset_name}.png"
+                            with BytesIO() as img_buffer:
+                                img.save(img_buffer, format='PNG')
+                                zip_file.writestr(img_file_name, img_buffer.getvalue())
+                
+                # Add scripts
+                if 'scripts' in game_plan:
+                    for script_name, script_code in game_plan['scripts'].items():
+                        zip_file.writestr(script_name, script_code)
+                
+                # Add additional elements
+                if 'additional_elements' in game_plan:
+                    for element_name, element_content in game_plan['additional_elements'].items():
+                        zip_file.writestr(f"{element_name}.txt", element_content)
+                
+                # Add music if generated
+                if 'music' in game_plan:
+                    music_response = requests.get(game_plan['music'])
+                    zip_file.writestr("background_music.mp3", music_response.content)
+    
+            st.download_button(
+                "Download Game Plan ZIP",
+                zip_buffer.getvalue(),
+                file_name="game_plan.zip",
+                mime="application/zip",
+                help="Download a ZIP file containing all generated assets and documents."
+            )
+    
+            # Display generated music if applicable
             if 'music' in game_plan:
-                music_response = requests.get(game_plan['music'])
-                zip_file.writestr("background_music.mp3", music_response.content)
-
-        st.download_button(
-            "Download Game Plan ZIP",
-            zip_buffer.getvalue(),
-            file_name="game_plan.zip",
-            mime="application/zip",
-            help="Download a ZIP file containing all generated assets and documents."
-        )
-
-        # Display generated music if applicable
-        if 'music' in game_plan:
-            st.subheader("Generated Music")
-            st.audio(game_plan['music'], format='audio/mp3')
-
-# Help Section
-with st.expander("Help & FAQ"):
-    st.markdown("""
-   
-## Help & Frequently Asked Questions
-
-## Basics
-
-1. **What is this tool?**  
-   This is an AI-powered game development assistant that helps you create a complete game plan, including game concepts, assets, scripts, and additional elements using artificial intelligence.
-
-2. **Do I need coding skills to use this tool?**  
-   No, basic game design knowledge helps, but coding is not required. However, generated scripts come with comments, so some understanding can enhance your experience.
-
-3. **What do I need to get started?**  
-   You'll need a game idea and API keys for OpenAI and Replicate. You can enter them in the sidebar (to the left).
-
-## Usage
-
-4. **How do I use this?**  
-   - Start by entering your game concept under the "Game Concept" tab.
-   - Customize asset generation and script generation in the relevant tabs.
-   - Click 'Generate Game Plan' to create your game concept, images, scripts, and additional elements.
-
-5. **Can I edit the generated content?**  
-   In the app itself, unfortunately no not yet. However, upon download of course all generated content is editable and meant to be customized to fit your specific needs.
-
-## Game Assets
-
-6. **What game assets can this tool generate?**  
-   You can generate:
-   - **Images:** Characters, enemies, backgrounds, objects, textures, sprites, and UI elements.
-   - **Scripts:** Code for Unity, Unreal Engine, or Blender.
-   - **Music:** Background music for your game using AI music generation models.
-   - **Additional Text:** Game concepts, storylines, character backgrounds, etc.
-
-7. **What image models are available?**  
-   The tool supports models such as OpenAI’s DALL·E 3, SDXL, and MidJourney to create game images based on your prompts.
-
-8. **Can I create 3D models?**  
-   Yes, you can convert 2D images to 3D models using Replicate's Wonder3D model. While this feature is still evolving, it provides basic 3D representations of selected assets.
-
-## Scripts and Code
-
-9. **What kinds of scripts can this tool generate?**  
-   You can generate:
-   - **Player Character scripts** (WASD movement, jumping, attacking).
-   - **Enemy AI scripts** (pathfinding, attack mechanics).
-   - **Object interaction scripts** (collectibles, traps).
-   - **Background management scripts** (parallax scrolling, day/night cycles).
-   - **More**
-
-10. **What programming languages are supported?**  
-   You can generate scripts in:
-   - **C# for Unity**
-   - **C++ for Unreal Engine**
-   - **Python for Blender**
-
-## AI Models
-
-11. **What AI models are used for generating content?**  
-    - **Chat Models:** GPT-4, GPT-4o-mini, Llama 2, and many others for text generation such as game concepts and scripts.
-    - **Image Models:** DALL-E 3, SDXL, Midjourney, and many others for creating visual assets.
-    - **Music Models:** Replicate's MusicGen model for background music generation.
-
-## Troubleshooting
-
-12. **What should I do if I encounter errors?**  
-    - Double-check your API keys.
-    - Ensure your internet connection is stable.
-    - Retry generating the content, or try using different models.
-
-13. **Why does content generation take time?**  
-    The time taken depends on the complexity of the content and the AI models being used. Complex game plans or large assets may take a few minutes.
- """)
-
-# Footer
-st.markdown("---")
-st.markdown("Created by Daniel Sheils.")
+                st.subheader("Generated Music")
+                st.audio(game_plan['music'], format='audio/mp3')
+    
+    # Help Section
+    with st.expander("Help & FAQ"):
+        st.markdown("""
+       
+    ## Help & Frequently Asked Questions
+    
+    ## Basics
+    
+    1. **What is this tool?**  
+       This is an AI-powered game development assistant that helps you create a complete game plan, including game concepts, assets, scripts, and additional elements using artificial intelligence.
+    
+    2. **Do I need coding skills to use this tool?**  
+       No, basic game design knowledge helps, but coding is not required. However, generated scripts come with comments, so some understanding can enhance your experience.
+    
+    3. **What do I need to get started?**  
+       You'll need a game idea and API keys for OpenAI and Replicate. You can enter them in the sidebar (to the left).
+    
+    ## Usage
+    
+    4. **How do I use this?**  
+       - Start by entering your game concept under the "Game Concept" tab.
+       - Customize asset generation and script generation in the relevant tabs.
+       - Click 'Generate Game Plan' to create your game concept, images, scripts, and additional elements.
+    
+    5. **Can I edit the generated content?**  
+       In the app itself, unfortunately no not yet. However, upon download of course all generated content is editable and meant to be customized to fit your specific needs.
+    
+    ## Game Assets
+    
+    6. **What game assets can this tool generate?**  
+       You can generate:
+       - **Images:** Characters, enemies, backgrounds, objects, textures, sprites, and UI elements.
+       - **Scripts:** Code for Unity, Unreal Engine, or Blender.
+       - **Music:** Background music for your game using AI music generation models.
+       - **Additional Text:** Game concepts, storylines, character backgrounds, etc.
+    
+    7. **What image models are available?**  
+       The tool supports models such as OpenAI’s DALL·E 3, SDXL, and MidJourney to create game images based on your prompts.
+    
+    8. **Can I create 3D models?**  
+       Yes, you can convert 2D images to 3D models using Replicate's Wonder3D model. While this feature is still evolving, it provides basic 3D representations of selected assets.
+    
+    ## Scripts and Code
+    
+    9. **What kinds of scripts can this tool generate?**  
+       You can generate:
+       - **Player Character scripts** (WASD movement, jumping, attacking).
+       - **Enemy AI scripts** (pathfinding, attack mechanics).
+       - **Object interaction scripts** (collectibles, traps).
+       - **Background management scripts** (parallax scrolling, day/night cycles).
+       - **More**
+    
+    10. **What programming languages are supported?**  
+       You can generate scripts in:
+       - **C# for Unity**
+       - **C++ for Unreal Engine**
+       - **Python for Blender**
+    
+    ## AI Models
+    
+    11. **What AI models are used for generating content?**  
+        - **Chat Models:** GPT-4, GPT-4o-mini, Llama 2, and many others for text generation such as game concepts and scripts.
+        - **Image Models:** DALL-E 3, SDXL, Midjourney, and many others for creating visual assets.
+        - **Music Models:** Replicate's MusicGen model for background music generation.
+    
+    ## Troubleshooting
+    
+    12. **What should I do if I encounter errors?**  
+        - Double-check your API keys.
+        - Ensure your internet connection is stable.
+        - Retry generating the content, or try using different models.
+    
+    13. **Why does content generation take time?**  
+        The time taken depends on the complexity of the content and the AI models being used. Complex game plans or large assets may take a few minutes.
+     """)
+    
+    # Footer
+    st.markdown("---")
+    st.markdown("Created by Daniel Sheils.")
