@@ -618,7 +618,7 @@ with st.expander("Help & FAQ"):
    - Click 'Generate Game Plan' to create your game concept, images, scripts, and additional elements.
 
 5. **Can I edit the generated content?**  
-   Yes, all generated content is editable and meant to be customized to fit your specific needs.
+   In the app itself, unfortunately no not yet. However, upon download of course all generated content is editable and meant to be customized to fit your specific needs.
 
 ## Game Assets
 
@@ -643,6 +643,9 @@ with st.expander("Help & FAQ"):
    - **Enemy AI scripts** (pathfinding, attack mechanics).
    - **Object interaction scripts** (collectibles, traps).
    - **Background management scripts** (parallax scrolling, day/night cycles).
+   - **Textures**
+   - **UI Elements**
+   - **Sprites
 
 10. **What programming languages are supported?**  
    You can generate scripts in:
