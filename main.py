@@ -39,7 +39,18 @@ if 'customization' not in st.session_state:
         'chat_model': 'gpt-4',
     }
 
-# Load and save API keys functions remain unchanged
+# Load API keys from a file
+def load_api_keys():
+    if os.path.exists(API_KEY_FILE):
+        with open(API_KEY_FILE, 'r') as file:
+            data = json.load(file)
+            return data.get('openai'), data.get('replicate')
+    return None, None
+
+# Save API keys to a file
+def save_api_keys(openai_key, replicate_key):
+    with open(API_KEY_FILE, 'w') as file:
+        json.dump({"openai": openai_key, "replicate": replicate_key}, file)
 
 # Get headers for OpenAI API
 def get_openai_headers():
@@ -170,7 +181,23 @@ def convert_image_to_3d(image_url):
     except Exception as e:
         return f"Error: Unable to convert image to 3D model: {str(e)}"
 
-# Generate music using Replicate's MusicGen (unchanged)
+# Generate music using Replicate's MusicGen
+def generate_music(prompt):
+    replicate_client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+    
+    try:
+        output = replicate_client.run(
+            "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
+            input={
+                "prompt": prompt,
+                "model_version": "stereo-large",
+                "output_format": "mp3",
+                "normalization_strategy": "peak"
+            }
+        )
+        return output
+    except Exception as e:
+        return f"Error: Unable to generate music: {str(e)}"
 
 # Generate multiple images based on customization settings
 def generate_images(customization, game_concept):
@@ -240,9 +267,79 @@ def generate_scripts(customization, game_concept):
     
     return scripts
 
-# Generate additional game elements (unchanged)
+# Generate additional game elements
+def generate_additional_elements(game_concept, elements_to_generate):
+    additional_elements = {}
+    
+    if elements_to_generate.get('storyline'):
+        additional_elements['storyline'] = generate_content(f"Create a detailed storyline for the following game concept: {game_concept}. Include a compelling narrative arc, character development, and key plot points that tie into the gameplay mechanics.", "game narrative design")
+    
+    if elements_to_generate.get('dialogue'):
+        additional_elements['dialogue'] = generate_content(f"Write sample dialogue for key characters in the following game concept: {game_concept}. Include conversations that reveal character personalities, advance the plot, and provide gameplay hints.", "game dialogue writing")
+    
+    if elements_to_generate.get('game_mechanics'):
+        additional_elements['game_mechanics'] = generate_content(f"Describe detailed game mechanics for the following game concept: {game_concept}. Include core gameplay loops, progression systems, and unique features that set this game apart. Explain how these mechanics tie into the game's theme and story.", "game design")
+    
+    if elements_to_generate.get('level_design'):
+        additional_elements['level_design'] = generate_content(f"Create a detailed level design document for the following game concept: {game_concept}. Include a layout sketch, key areas, enemy placement, puzzle elements, and how the level progression ties into the overall game narrative.", "game level design")
+    
+    return additional_elements
 
-# Generate a complete game plan (unchanged)
+# Generate a complete game plan
+def generate_game_plan(user_prompt, customization):
+    game_plan = {}
+    
+    # Status updates
+    status = st.empty()
+    progress_bar = st.progress(0)
+    
+    def update_status(message, progress):
+        status.text(message)
+        progress_bar.progress(progress)
+
+    # Generate game concept
+    if customization['generate_elements']['game_concept']:
+        update_status("Generating game concept...", 0.1)
+        game_plan['game_concept'] = generate_content(f"Invent a new 2D game concept with a detailed theme, setting, and unique features based on the following prompt: {user_prompt}. Ensure the game has WASD controls and consider how it could stand out in the current market.", "game design")
+    
+    # Generate world concept
+    if customization['generate_elements']['world_concept']:
+        update_status("Creating world concept...", 0.2)
+        game_plan['world_concept'] = generate_content(f"Create a detailed world concept for the 2D game: {game_plan['game_concept']}. Describe the environment, atmosphere, and any unique elements that make this world compelling for players to explore.", "world building")
+    
+    # Generate character concepts
+    if customization['generate_elements']['character_concepts']:
+        update_status("Designing characters...", 0.3)
+        game_plan['character_concepts'] = generate_content(f"Create detailed character concepts for the player and enemies in the 2D game: {game_plan['game_concept']}. Include their backstories, motivations, and how they fit into the game world and mechanics.", "character design")
+    
+    # Generate plot
+    if customization['generate_elements']['plot']:
+        update_status("Crafting the plot...", 0.4)
+        game_plan['plot'] = generate_content(f"Create a plot for the 2D game based on the world and characters of the game: {game_plan.get('world_concept', '')} and {game_plan.get('character_concepts', '')}. Ensure the plot integrates well with the gameplay and provides motivation for the player's actions.", "plot development")
+    
+    # Generate images
+    if any(customization['image_count'].values()):
+        update_status("Generating game images...", 0.5)
+        game_plan['images'] = generate_images(customization, game_plan.get('game_concept', ''))
+    
+    # Generate scripts
+    if any(customization['script_count'].values()):
+        update_status("Writing game scripts...", 0.7)
+        game_plan['scripts'] = generate_scripts(customization, game_plan.get('game_concept', ''))
+    
+    # Generate additional elements
+    update_status("Creating additional game elements...", 0.8)
+    game_plan['additional_elements'] = generate_additional_elements(game_plan.get('game_concept', ''), customization['generate_elements'])
+    
+    # Optional: Generate music
+    if customization['use_replicate']['generate_music']:
+        update_status("Composing background music...", 0.9)
+        music_prompt = f"Create background music for the game: {game_plan.get('game_concept', '')}. The music should reflect the game's atmosphere and enhance the player's experience."
+        game_plan['music'] = generate_music(music_prompt)
+
+    update_status("Game plan generation complete!", 1.0)
+
+    return game_plan
 
 # Streamlit app layout
 st.title("Automate Your Game Dev")
