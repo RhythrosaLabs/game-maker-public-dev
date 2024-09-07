@@ -595,27 +595,128 @@ if st.button("Generate Game Plan", key="generate_button"):
 # Help Section
 with st.expander("Help & FAQ"):
     st.markdown("""
-    ## Frequently Asked Questions
+    # Help & Frequently Asked Questions
 
-    1. **How do I use this tool?**
-       Start by describing your game concept in the 'Game Concept' tab. Then, customize your asset and script generation options in the respective tabs. Finally, click the 'Generate Game Plan' button.
+## Basics
 
-    2. **What kind of assets can I generate?**
-       You can generate various 2D game assets including characters, enemies, backgrounds, objects, textures, sprites, and UI elements. 3D conversion is also available for some asset types, but this feature is currently not working.
+1. **What is this tool?**
+   This is an AI-powered game development assistant. It helps you create various elements for your game, from concept to assets, using artificial intelligence.
 
-    3. **What types of scripts can I generate?**
-       You can generate scripts for player characters, enemies, game objects, and level backgrounds. These can be in Unity C#, Unreal C++, or Blender Python formats.
+2. **Do I need to know how to code to use this tool?**
+   No, you don't need coding knowledge to use the basic features. However, understanding game development concepts will help you make the most of the generated content.
 
-    4. **Can I generate music for my game?**
-       Yes, you can generate background music that fits your game concept. Enable this option in the sidebar under 'Additional Options'.
+3. **What do I need to get started?**
+   You need an idea for a game and API keys for OpenAI and Replicate. The app will guide you through entering these keys.
 
-    5. **How do I save my generated game plan?**
-       After generation, you can download a ZIP file containing all assets, scripts, and additional elements by clicking the 'Download Game Plan ZIP' button.
+## Using the Tool
 
-    6. **What do I do if I encounter an error?**
-       Ensure that you have entered valid API keys for OpenAI and Replicate. If the error persists, try refreshing the page or restarting the app.
+4. **How do I use this tool?**
+   - Start by entering your game idea in the 'Game Concept' box at the top.
+   - Customize your options in the sidebar (e.g., how many characters you want, what kind of scripts, etc.).
+   - Click the 'Generate Game Plan' button.
+   - Wait for the AI to create your game elements.
+   - Review the results and download your game plan.
 
-    For more information or support, please contact: support@example.com
+5. **What if I don't like the results?**
+   You can regenerate any part of the game plan. Just adjust your inputs or options and click 'Generate Game Plan' again.
+
+6. **Can I edit the generated content?**
+   Yes! The generated content is a starting point. You can and should edit it to fit your exact vision.
+
+## Game Assets
+
+7. **What are game assets?**
+   Game assets are the building blocks of your game, including images, sounds, and code that make up the game world and its rules.
+
+8. **What kind of assets can I generate with this tool?**
+   You can generate:
+   - Images: Characters, enemies, backgrounds, objects, textures, sprites, and UI elements.
+   - Scripts: Code for player characters, enemies, game objects, and level backgrounds.
+   - Music: Background music for your game.
+   - Text: Game concepts, world descriptions, character backgrounds, and more.
+
+9. **What's the difference between a sprite and a texture?**
+   - A sprite is a 2D image used for characters or objects in the game.
+   - A texture is an image applied to the surface of 3D models or used to create detailed 2D backgrounds.
+
+10. **What does UI mean?**
+    UI stands for User Interface. These are the graphic elements players interact with, like menus, health bars, or inventory screens.
+
+11. **Can this tool create 3D models?**
+    While the tool primarily focuses on 2D assets, it can attempt to convert some 2D images into 3D models. However, this feature may not always produce perfect results.
+
+## Scripts and Code
+
+12. **What are game scripts?**
+    Game scripts are pieces of code that define how elements in your game behave. For example, how a player moves or how an enemy attacks.
+
+13. **What types of scripts can I generate?**
+    You can generate scripts for:
+    - Player characters: How the main character moves and interacts.
+    - Enemies: How opponents behave and challenge the player.
+    - Game objects: How items or obstacles in the game world function.
+    - Level backgrounds: How the game environment is set up and behaves.
+
+14. **What programming languages are used for the scripts?**
+    The tool can generate scripts in:
+    - C# for Unity
+    - C++ for Unreal Engine
+    - Python for Blender
+
+15. **Do I need to know these programming languages?**
+    Basic familiarity helps, but the generated scripts are commented to explain what each part does. You can learn as you go!
+
+## AI Models
+
+16. **What are AI models and why are there different ones?**
+    AI models are programs trained to perform specific tasks. Different models have different strengths, speeds, and specialties.
+
+17. **What are chat models used for in this tool?**
+    Chat models generate text-based content like game concepts, character descriptions, and scripts. They understand context and can produce creative, coherent text.
+
+18. **What are image generation models used for?**
+    These models create images based on text descriptions. They're used to generate visual assets for your game.
+
+19. **How do I choose which model to use?**
+    - For chat models, GPT-4 and Llama 2 70B are good all-rounders.
+    - For images, DALL-E 3 and SDXL are versatile choices.
+    - Experiment with different models to see which works best for your needs.
+
+20. **Can you explain some of the chat models?**
+    - GPT-4: OpenAI's most advanced model, great for complex tasks.
+    - Llama 2: Meta's powerful open-source model, good for various tasks.
+    - Vicuna: An open-source model that's good at following instructions.
+    - Alpaca: Another instruction-following model, smaller but faster.
+
+21. **What about some of the image models?**
+    - DALL-E 3: OpenAI's latest, creates highly detailed and accurate images.
+    - Stable Diffusion: An open-source model, very versatile.
+    - Midjourney: Known for artistic and imaginative results.
+    - Waifu Diffusion: Specialized in anime-style art.
+
+## Troubleshooting
+
+22. **What do I do if I get an error?**
+    - Check if you've entered your API keys correctly.
+    - Ensure you have a stable internet connection.
+    - Try refreshing the page or restarting the app.
+    - If problems persist, contact support with details of the error.
+
+23. **Why is the generation process taking so long?**
+    Generation time can vary based on the complexity of your request, the models used, and current server load. Complex game plans with many assets may take several minutes.
+
+24. **Can I save my progress or settings?**
+    Currently, settings are not saved between sessions. However, you can download your generated game plan as a ZIP file to save your progress.
+
+## Privacy and Usage
+
+25. **Is my game idea safe? Who owns the generated content?**
+    Your inputs and generated content are private. You own the rights to the original ideas and concepts you input. The ownership of AI-generated content can be complex - if you're planning commercial use, consult with a legal professional.
+
+26. **Are there usage limits?**
+    Usage may be limited by your API key restrictions or our server capacity. Check the documentation of OpenAI and Replicate for their specific limitations.
+
+Remember, game development is a creative process. Use this tool as a starting point and inspiration, but don't be afraid to modify and expand upon the generated content to make your game truly unique!
     """)
 
 # Footer
