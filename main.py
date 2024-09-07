@@ -62,7 +62,7 @@ def get_openai_headers():
 
 # Generate content using selected chat model
 def generate_content(prompt, role):
-    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-3.5-turbo']:
+    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4o-mini']:
         data = {
             "model": st.session_state.customization['chat_model'],
             "messages": [
@@ -410,7 +410,7 @@ with st.sidebar:
     st.markdown("### AI Model Selection")
     st.session_state.customization['chat_model'] = st.selectbox(
         "Select Chat Model",
-        options=['gpt-4', 'gpt-3.5-turbo', 'llama'],
+        options=['gpt-4', 'gpt-4o-mini', 'llama'],
         index=0
     )
     st.session_state.customization['image_model'] = st.selectbox(
@@ -656,7 +656,7 @@ with st.expander("Help & FAQ"):
 ## AI Models
 
 12. **What AI models are used for generating content?**  
-    - **Chat Models:** GPT-4, GPT-3.5-turbo, Llama 2 for text generation such as game concepts and scripts.
+    - **Chat Models:** GPT-4, GPT-4o-mini, Llama 2 for text generation such as game concepts and scripts.
     - **Image Models:** DALL-E 3, SDXL, Midjourney for creating visual assets.
     - **Music Models:** Replicate's MusicGen model for background music generation.
 
