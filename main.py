@@ -656,7 +656,7 @@ with st.expander("Help & FAQ"):
 ## AI Models
 
 11. **What AI models are used for generating content?**  
-    - **Chat Models:** GPT-4, GPT-3.5-turbo, Llama 2, and many others for text generation such as game concepts and scripts.
+    - **Chat Models:** GPT-4, GPT-4o-mini, Llama 2, and many others for text generation such as game concepts and scripts.
     - **Image Models:** DALL-E 3, SDXL, Midjourney, and many others for creating visual assets.
     - **Music Models:** Replicate's MusicGen model for background music generation.
 
