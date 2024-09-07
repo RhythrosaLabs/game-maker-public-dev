@@ -437,8 +437,8 @@ st.session_state.customization['image_model'] = st.selectbox(
 )
 
     # Replicate Options
-    st.markdown("### Additional Options")
-        st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Music", value=st.session_state.customization['use_replicate']['generate_music'])
+st.markdown("### Additional Options")
+st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Music", value=st.session_state.customization['use_replicate']['generate_music'])
 
 # Main content area
 tab1, tab2, tab3, tab4 = st.tabs(["Game Concept", "Asset Generation", "Script Generation", "Additional Elements"])
