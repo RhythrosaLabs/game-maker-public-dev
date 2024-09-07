@@ -64,7 +64,7 @@ def get_openai_headers():
 # Generate content using OpenAI API
 def generate_content(prompt, role):
     data = {
-        "model": "gpt-4",
+        "model": "gpt-4o-mini",
         "messages": [
             {"role": "system", "content": f"You are a highly skilled assistant specializing in {role}. Provide detailed, creative, and well-structured responses."},
             {"role": "user", "content": prompt}
