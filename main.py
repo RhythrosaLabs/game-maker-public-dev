@@ -387,7 +387,7 @@ st.header("Customization")
 st.subheader("AI Model Selection")
 st.session_state.customization['chat_model'] = st.selectbox(
     "Select Chat Model",
-    options=['gpt-4', 'gpt-4-0314', 'llama'],
+    options=['gpt-4o-mini', 'gpt-4', 'llama'],
     index=0
 )
 st.session_state.customization['image_model'] = st.selectbox(
