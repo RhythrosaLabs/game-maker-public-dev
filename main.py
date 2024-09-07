@@ -37,7 +37,7 @@ if 'customization' not in st.session_state:
             'level_design': False
         },
         'image_model': 'dall-e-3',
-        'chat_model': 'gpt-4',
+        'chat_model': 'gpt-4o-mini',
     }
 
 # Load API keys from a file
@@ -62,7 +62,7 @@ def get_openai_headers():
 
 # Generate content using selected chat model
 def generate_content(prompt, role):
-    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4-0314']:
+    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4o-mini']:
         data = {
             "model": st.session_state.customization['chat_model'],
             "messages": [
@@ -399,7 +399,7 @@ st.header("Customization")
 st.subheader("AI Model Selection")
 st.session_state.customization['chat_model'] = st.selectbox(
     "Select Chat Model",
-    options=['gpt-4', 'gpt-4-0314', 'llama'],
+    options=['gpt-4', 'gpt-4o-mini', 'llama'],
     index=0
 )
 st.session_state.customization['image_model'] = st.selectbox(
