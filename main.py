@@ -643,9 +643,9 @@ with st.expander("Help & FAQ"):
    - **Enemy AI scripts** (pathfinding, attack mechanics).
    - **Object interaction scripts** (collectibles, traps).
    - **Background management scripts** (parallax scrolling, day/night cycles).
-   - **Textures**
-   - **UI Elements**
-   - **Sprites
+   - **Textures** (terrains, fabrics, etc.)
+   - **UI Elements** (health bars, buttons, etc.)
+   - **Sprites** (a collection if images suitable for animation)
 
 10. **What programming languages are supported?**  
    You can generate scripts in:
@@ -656,8 +656,8 @@ with st.expander("Help & FAQ"):
 ## AI Models
 
 11. **What AI models are used for generating content?**  
-    - **Chat Models:** GPT-4, GPT-3.5-turbo, Llama 2 for text generation such as game concepts and scripts.
-    - **Image Models:** DALL-E 3, SDXL, Midjourney for creating visual assets.
+    - **Chat Models:** GPT-4, GPT-3.5-turbo, Llama 2, and many others for text generation such as game concepts and scripts.
+    - **Image Models:** DALL-E 3, SDXL, Midjourney, and many others for creating visual assets.
     - **Music Models:** Replicate's MusicGen model for background music generation.
 
 ## Troubleshooting
