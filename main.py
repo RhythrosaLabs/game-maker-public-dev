@@ -170,20 +170,37 @@ def convert_image_to_3d(image_url):
     replicate_client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
     
     try:
-        output = replicate_client.run(
-            "camenduru/lgm:d2870893aa115773465a823fe70fd446673604189843f39a99642dd9171e05e2",
+        prediction = replicate_client.predictions.create(
+            version="d2870893aa115773465a823fe70fd446673604189843f39a99642dd9171e05e2",
             input={
-                "input_image": image_url
+                "input_image": image_url,
+                "prompt": "a 3D model",  # You can customize this prompt
+                "negative_prompt": "ugly, blurry, pixelated, obscure, unnatural colors, poor lighting, dull, unclear, cropped, lowres, low quality, artifacts, duplicate",
+                "seed": 42  # You can randomize this if desired
             }
         )
         
-        # The output is a list with URLs for different file formats
-        return {
-            'glb': output[0] if output else None,
-            'obj': output[1] if len(output) > 1 else None
-        }
+        # Wait for the prediction to complete
+        prediction = replicate_client.predictions.wait(prediction.id)
+        
+        if prediction.status != "succeeded":
+            st.error(f"3D conversion failed: {prediction.error}")
+            return None
+        
+        # The output is a list of URLs
+        output_urls = prediction.output
+        
+        result = {'glb': None, 'obj': None}
+        for url in output_urls:
+            if url.endswith('.glb'):
+                result['glb'] = url
+            elif url.endswith('.obj'):
+                result['obj'] = url
+        
+        return result if (result['glb'] or result['obj']) else None
     except Exception as e:
-        return f"Error: Unable to convert image to 3D model: {str(e)}"
+        st.error(f"Error during 3D conversion: {str(e)}")
+        return None
 
 # Generate music using Replicate's MusicGen
 def generate_music(prompt):
@@ -256,10 +273,6 @@ def generate_scripts(customization, game_concept):
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
             desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
-            
-            if customization['code_types']['unity']:
-                unity_script = generate_content(f"Create a comprehensive Unity C# script for {desc}. Include detailed comments, error handling, and optimize for performance. Ensure the script follows Unity best practices and is easily integrable into a larger project.", "Unity game development")
-                scripts[f"unity_{script_type.lower()}_script_{i + 1}.cs"] = unity_script
             
             if customization['code_types']['unity']:
                 unity_script = generate_content(f"Create a comprehensive Unity C# script for {desc}. Include detailed comments, error handling, and optimize for performance. Ensure the script follows Unity best practices and is easily integrable into a larger project.", "Unity game development")
