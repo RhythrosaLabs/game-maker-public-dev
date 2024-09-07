@@ -6,6 +6,7 @@ import zipfile
 from io import BytesIO
 from PIL import Image
 import replicate
+import base64
 
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
@@ -36,7 +37,7 @@ if 'customization' not in st.session_state:
             'level_design': False
         },
         'image_model': 'dall-e-3',
-        'chat_model': 'gpt-4o-mini',
+        'chat_model': 'gpt-4',
     }
 
 # Load API keys from a file
@@ -61,7 +62,7 @@ def get_openai_headers():
 
 # Generate content using selected chat model
 def generate_content(prompt, role):
-    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4o-mini']:
+    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4-0314']:
         data = {
             "model": st.session_state.customization['chat_model'],
             "messages": [
@@ -176,8 +177,11 @@ def convert_image_to_3d(image_url):
             }
         )
         
-        # The output is a list with a single URL, so we return the first element
-        return output[0] if output else None
+        # The output is a list with URLs for different file formats
+        return {
+            'glb': output[0] if output else None,
+            'obj': output[1] if len(output) > 1 else None
+        }
     except Exception as e:
         return f"Error: Unable to convert image to 3D model: {str(e)}"
 
@@ -200,7 +204,6 @@ def generate_music(prompt):
         return f"Error: Unable to generate music: {str(e)}"
 
 # Generate multiple images based on customization settings
-# Update the sizes dictionary in the generate_images function
 def generate_images(customization, game_concept):
     images = {}
     
@@ -240,8 +243,6 @@ def generate_images(customization, game_concept):
 
     return images
 
-# The rest of the code remains unchanged
-
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
     script_descriptions = {
@@ -255,6 +256,10 @@ def generate_scripts(customization, game_concept):
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
             desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
+            
+            if customization['code_types']['unity']:
+                unity_script = generate_content(f"Create a comprehensive Unity C# script for {desc}. Include detailed comments, error handling, and optimize for performance. Ensure the script follows Unity best practices and is easily integrable into a larger project.", "Unity game development")
+                scripts[f"unity_{script_type.lower()}_script_{i + 1}.cs"] = unity_script
             
             if customization['code_types']['unity']:
                 unity_script = generate_content(f"Create a comprehensive Unity C# script for {desc}. Include detailed comments, error handling, and optimize for performance. Ensure the script follows Unity best practices and is easily integrable into a larger project.", "Unity game development")
@@ -344,6 +349,10 @@ def generate_game_plan(user_prompt, customization):
 
     return game_plan
 
+# Function to display images
+def display_image(image_url, caption):
+    st.image(image_url, caption=caption, use_column_width=True)
+
 # Streamlit app layout
 st.title("Automate Your Game Dev")
 
@@ -390,7 +399,7 @@ st.header("Customization")
 st.subheader("AI Model Selection")
 st.session_state.customization['chat_model'] = st.selectbox(
     "Select Chat Model",
-    options=['gpt-4o-mini', 'gpt-4', 'llama'],
+    options=['gpt-4', 'gpt-4-0314', 'llama'],
     index=0
 )
 st.session_state.customization['image_model'] = st.selectbox(
@@ -467,10 +476,16 @@ if st.button("Generate Game Plan"):
             st.subheader("Assets")
             st.write("### Images")
             for img_name, img_url in game_plan['images'].items():
-                if '3d_model' in img_name:
-                    st.write(f"{img_name}: [View 3D Model]({img_url})")
+                if isinstance(img_url, dict):  # This is a 3D model
+                    st.write(f"{img_name}:")
+                    if img_url.get('glb'):
+                        st.write(f"[View 3D Model (GLB)]({img_url['glb']})")
+                    if img_url.get('obj'):
+                        st.write(f"[View 3D Model (OBJ)]({img_url['obj']})")
+                elif isinstance(img_url, str) and not img_url.startswith('Error'):
+                    display_image(img_url, img_name)
                 else:
-                    st.write(f"{img_name}: [View Image]({img_url})")
+                    st.write(f"{img_name}: {img_url}")
 
         if 'scripts' in game_plan:
             st.write("### Scripts")
@@ -494,16 +509,20 @@ if st.button("Generate Game Plan"):
             # Add images and 3D models
             if 'images' in game_plan:
                 for asset_name, asset_url in game_plan['images'].items():
-                    if asset_url and asset_url.startswith('http'):
-                        asset_response = requests.get(asset_url)
-                        if '3d_model' in asset_name:
-                            zip_file.writestr(f"{asset_name}.glb", asset_response.content)
-                        else:
-                            img = Image.open(BytesIO(asset_response.content))
-                            img_file_name = f"{asset_name}.png"
-                            with BytesIO() as img_buffer:
-                                img.save(img_buffer, format='PNG')
-                                zip_file.writestr(img_file_name, img_buffer.getvalue())
+                    if isinstance(asset_url, dict):  # This is a 3D model
+                        if asset_url.get('glb'):
+                            glb_response = requests.get(asset_url['glb'])
+                            zip_file.writestr(f"{asset_name}.glb", glb_response.content)
+                        if asset_url.get('obj'):
+                            obj_response = requests.get(asset_url['obj'])
+                            zip_file.writestr(f"{asset_name}.obj", obj_response.content)
+                    elif isinstance(asset_url, str) and asset_url.startswith('http'):
+                        img_response = requests.get(asset_url)
+                        img = Image.open(BytesIO(img_response.content))
+                        img_file_name = f"{asset_name}.png"
+                        with BytesIO() as img_buffer:
+                            img.save(img_buffer, format='PNG')
+                            zip_file.writestr(img_file_name, img_buffer.getvalue())
             
             # Add scripts
             if 'scripts' in game_plan:
