@@ -170,14 +170,14 @@ def convert_image_to_3d(image_url):
     
     try:
         output = replicate_client.run(
-            "cjwbw/shap-e:5957069d5c509126a73c7cb68abcddbb985aeefa4d318e7c63ec1352ce6da68c",
+            "camenduru/lgm:d2870893aa115773465a823fe70fd446673604189843f39a99642dd9171e05e2",
             input={
-                "input_image": image_url,
-                "render_mode": "nerf",
-                "guidance_scale": 3.0,
+                "input_image": image_url
             }
         )
-        return output['glb'] if output and 'glb' in output else None
+        
+        # The output is a list with a single URL, so we return the first element
+        return output[0] if output else None
     except Exception as e:
         return f"Error: Unable to convert image to 3D model: {str(e)}"
 
