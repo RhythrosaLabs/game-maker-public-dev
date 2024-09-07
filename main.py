@@ -37,7 +37,7 @@ if 'customization' not in st.session_state:
             'level_design': False
         },
         'image_model': 'dall-e-3',
-        'chat_model': 'gpt-4o-mini',
+        'chat_model': 'gpt-4',
     }
 
 # Load API keys from a file
@@ -62,7 +62,7 @@ def get_openai_headers():
 
 # Generate content using selected chat model
 def generate_content(prompt, role):
-    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4o-mini']:
+    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-3.5-turbo']:
         data = {
             "model": st.session_state.customization['chat_model'],
             "messages": [
@@ -406,39 +406,22 @@ with st.sidebar:
             st.session_state.api_keys['replicate'] = replicate_key
             st.success("API Keys saved successfully!")
 
-    ## Model Selection
-st.subheader("AI Model Selection")
-st.session_state.customization['chat_model'] = st.selectbox(
-    "Select Chat Model",
-    options=[
-        'gpt-4',
-        'gpt-4o-mini',
-        'llama',
-        'replicate/llama-2-70b-chat:2c1608e18606fad2812020dc541930f2d0495ce32eee50074220b87300bc16e1',
-        'replicate/vicuna-13b:6282abe6a492de4145d7bb601023762212f9ddbbe78278bd6771c8b3b2f2a13b',
-        'replicate/dolly-v2-12b:ef0e1aefc61f8e096ebe4db6b2bacc297daf2ef6899f0f7e001ec445893500e5',
-        'replicate/koala-13b:c7fc755e5ec27436b5d29923ac738427bdb2c5c03685c36d543d441b8db8fa8d'
-    ],
-    index=0
-)
-
-st.session_state.customization['image_model'] = st.selectbox(
-    "Select Image Generation Model",
-    options=[
-        'dall-e-3',
-        'sdxl',
-        'midjourney',
-        'replicate/stable-diffusion:ac732df83cea7fff18b8472768c88ad041fa750ff7682a21affe81863cbe77e4',
-        'replicate/kandinsky-2:ea1addaab376f4dc227f5368bbd8eff901820fd1cc14ed8cad63b29249e9d463',
-        'replicate/waifu-diffusion:25d2f75ecda0c0bed34c806b7b70319a53a1bccad3ade1a7496524f013f48983',
-        'replicate/openjourney:9936c2001faa2194a261c01381f90e65261879985476014a0a37a334593a05eb'
-    ],
-    index=0
-)
+    # Model Selection
+    st.markdown("### AI Model Selection")
+    st.session_state.customization['chat_model'] = st.selectbox(
+        "Select Chat Model",
+        options=['gpt-4', 'gpt-3.5-turbo', 'llama'],
+        index=0
+    )
+    st.session_state.customization['image_model'] = st.selectbox(
+        "Select Image Generation Model",
+        options=['dall-e-3', 'sdxl', 'midjourney'],
+        index=0
+    )
 
     # Replicate Options
-st.markdown("### Additional Options")
-st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Music", value=st.session_state.customization['use_replicate']['generate_music'])
+    st.markdown("### Additional Options")
+    st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Music", value=st.session_state.customization['use_replicate']['generate_music'])
 
 # Main content area
 tab1, tab2, tab3, tab4 = st.tabs(["Game Concept", "Asset Generation", "Script Generation", "Additional Elements"])
@@ -613,7 +596,8 @@ if st.button("Generate Game Plan", key="generate_button"):
 with st.expander("Help & FAQ"):
     st.markdown("""
    
-## Help & Frequently Asked Questions
+## Basics
+# Help & Frequently Asked Questions
 
 ## Basics
 
@@ -626,42 +610,44 @@ with st.expander("Help & FAQ"):
 3. **What do I need to get started?**  
    You'll need a game idea and API keys for OpenAI and Replicate. You can enter them in the sidebar (to the left).
 
-## Usage
+## Using the Tool
 
-4. **How do I use this?**  
+4. **How do I use this tool?**  
    - Start by entering your game concept under the "Game Concept" tab.
    - Customize asset generation and script generation in the relevant tabs.
    - Click 'Generate Game Plan' to create your game concept, images, scripts, and additional elements.
 
-5. **Can I edit the generated content?**  
-   In the app itself, unfortunately no not yet. However, upon download of course all generated content is editable and meant to be customized to fit your specific needs.
+5. **What if I don’t like the generated results?**  
+   You can tweak inputs or regenerate specific assets by adjusting options and rerunning the generation.
+
+6. **Can I edit the generated content?**  
+   Yes, all generated content is editable and meant to be customized to fit your specific needs.
 
 ## Game Assets
 
-6. **What game assets can this tool generate?**  
+7. **What game assets can this tool generate?**  
    You can generate:
    - **Images:** Characters, enemies, backgrounds, objects, textures, sprites, and UI elements.
    - **Scripts:** Code for Unity, Unreal Engine, or Blender.
    - **Music:** Background music for your game using AI music generation models.
    - **Additional Text:** Game concepts, storylines, character backgrounds, etc.
 
-7. **What image models are available?**  
+8. **What image models are available?**  
    The tool supports models such as OpenAI’s DALL·E 3, SDXL, and MidJourney to create game images based on your prompts.
 
-8. **Can I create 3D models?**  
+9. **Can I create 3D models?**  
    Yes, you can convert 2D images to 3D models using Replicate's Wonder3D model. While this feature is still evolving, it provides basic 3D representations of selected assets.
 
 ## Scripts and Code
 
-9. **What kinds of scripts can this tool generate?**  
+10. **What kinds of scripts can this tool generate?**  
    You can generate:
    - **Player Character scripts** (WASD movement, jumping, attacking).
    - **Enemy AI scripts** (pathfinding, attack mechanics).
    - **Object interaction scripts** (collectibles, traps).
    - **Background management scripts** (parallax scrolling, day/night cycles).
-   - **More**
 
-10. **What programming languages are supported?**  
+11. **What programming languages are supported?**  
    You can generate scripts in:
    - **C# for Unity**
    - **C++ for Unreal Engine**
@@ -669,20 +655,23 @@ with st.expander("Help & FAQ"):
 
 ## AI Models
 
-11. **What AI models are used for generating content?**  
-    - **Chat Models:** GPT-4, GPT-4o-mini, Llama 2, and many others for text generation such as game concepts and scripts.
-    - **Image Models:** DALL-E 3, SDXL, Midjourney, and many others for creating visual assets.
+12. **What AI models are used for generating content?**  
+    - **Chat Models:** GPT-4, GPT-3.5-turbo, Llama 2 for text generation such as game concepts and scripts.
+    - **Image Models:** DALL-E 3, SDXL, Midjourney for creating visual assets.
     - **Music Models:** Replicate's MusicGen model for background music generation.
 
 ## Troubleshooting
 
-12. **What should I do if I encounter errors?**  
+13. **What should I do if I encounter errors?**  
     - Double-check your API keys.
     - Ensure your internet connection is stable.
     - Retry generating the content, or try using different models.
 
-13. **Why does content generation take time?**  
+14. **Why does content generation take time?**  
     The time taken depends on the complexity of the content and the AI models being used. Complex game plans or large assets may take a few minutes.
+
+15. **Can I download all the generated assets?**  
+    Yes, after the game plan is generated, you can download a ZIP file containing all assets, scripts, and other content.
  """)
 
 # Footer
