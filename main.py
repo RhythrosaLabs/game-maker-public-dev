@@ -4,14 +4,10 @@ import json
 import os
 import zipfile
 from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 import replicate
 import base64
-import moviepy.editor as mp
 from midiutil import MIDIFile
-import numpy as np
-import tempfile
-
 
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
@@ -27,6 +23,7 @@ if 'customization' not in st.session_state:
         'image_types': ['Character', 'Enemy', 'Background', 'Object', 'Texture', 'Sprite', 'UI'],
         'script_types': ['Player', 'Enemy', 'Game Object', 'Level Background'],
         'image_count': {t: 0 for t in ['Character', 'Enemy', 'Background', 'Object', 'Texture', 'Sprite', 'UI']},
+        'image_notes': {t: '' for t in ['Character', 'Enemy', 'Background', 'Object', 'Texture', 'Sprite', 'UI']},
         'script_count': {t: 0 for t in ['Player', 'Enemy', 'Game Object', 'Level Background']},
         'use_replicate': {'generate_music': False},
         'convert_to_3d': {t: False for t in ['Character', 'Enemy', 'Object', 'UI']},
@@ -45,7 +42,6 @@ if 'customization' not in st.session_state:
         'chat_model': 'gpt-4o-mini',
         'code_model': 'gpt-4o-mini',
         'experimental': {
-            'create_trailer': False,
             'compose_midi': False
         }
     }
@@ -252,7 +248,9 @@ def generate_images(customization, game_concept):
 
     for img_type in customization['image_types']:
         for i in range(customization['image_count'].get(img_type, 0)):
-            prompt = f"{image_prompts[img_type]} The design should fit the following game concept: {game_concept}. Variation {i + 1}"
+            base_prompt = f"{image_prompts[img_type]} The design should fit the following game concept: {game_concept}. Variation {i + 1}"
+            image_notes = customization['image_notes'].get(img_type, '')
+            prompt = f"{base_prompt} {image_notes}" if image_notes else base_prompt
             size = sizes[img_type]
             
             image_url = generate_image(prompt, size)
@@ -325,83 +323,6 @@ def generate_additional_elements(game_concept, elements_to_generate):
     
     return additional_elements
 
-# Create trailer function
-def create_trailer(images, music_url, game_concept):
-    try:
-        if not images:
-            raise ValueError("No images available for trailer creation.")
-        
-        if not music_url:
-            raise ValueError("No music available for trailer creation.")
-
-        # Download music
-        music_response = requests.get(music_url)
-        music_response.raise_for_status()
-        music_file = BytesIO(music_response.content)
-        
-        # Create video clips from images
-        clips = []
-        for i, (img_name, img_url) in enumerate(images.items()):
-            try:
-                # Download image
-                img_response = requests.get(img_url)
-                img_response.raise_for_status()
-                img = Image.open(BytesIO(img_response.content))
-                
-                # Resize image to 1080p if larger
-                if img.width > 1920 or img.height > 1080:
-                    img.thumbnail((1920, 1080), Image.LANCZOS)
-                
-                # Generate caption
-                caption = generate_content(f"Create a short, catchy caption for this {img_name} in the context of the game: {game_concept}", "game marketing")
-                
-                # Create a new image with the caption
-                img_with_caption = Image.new('RGB', (img.width, img.height + 100), (0, 0, 0))
-                img_with_caption.paste(img, (0, 0))
-                
-                # Add caption to the image
-                draw = ImageDraw.Draw(img_with_caption)
-                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 30)
-                draw.text((10, img.height + 10), caption, font=font, fill=(255, 255, 255))
-                
-                # Convert to numpy array
-                img_array = np.array(img_with_caption)
-                
-                # Create clip
-                clip = mp.ImageClip(img_array).set_duration(2)
-                clips.append(clip)
-            except Exception as e:
-                st.warning(f"Error processing image {img_name}: {str(e)}")
-                continue
-        
-        if not clips:
-            raise ValueError("No valid images could be processed for the trailer.")
-        
-        # Concatenate clips
-        final_clip = mp.concatenate_videoclips(clips)
-        
-        # Add music
-        audio = mp.AudioFileClip(music_file.name)
-        audio = audio.subclip(0, final_clip.duration)
-        final_clip = final_clip.set_audio(audio)
-        
-        # Add fade in and fade out
-        final_clip = final_clip.fade_in(0.5).fade_out(0.5)
-        
-        # Write video file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_file:
-            output_path = temp_file.name
-        
-        final_clip.write_videofile(output_path, fps=24, codec='libx264', audio_codec='aac')
-        
-        return output_path
-    except ValueError as ve:
-        st.warning(f"Error creating trailer: {str(ve)}")
-        return None
-    except Exception as e:
-        st.error(f"Error creating trailer: {str(e)}")
-        return None
-        
 # Compose MIDI function
 def compose_midi(game_concept):
     try:
@@ -483,12 +404,6 @@ def generate_game_plan(user_prompt, customization):
         game_plan['music'] = generate_music(music_prompt)
 
     # Experimental features
-    if customization['experimental']['create_trailer']:
-        update_status("Creating game trailer...", 0.95)
-        trailer_path = create_trailer(game_plan['images'], game_plan.get('music'), game_plan['game_concept'])
-        if trailer_path:
-            game_plan['trailer'] = trailer_path
-
     if customization['experimental']['compose_midi']:
         update_status("Composing MIDI theme...", 0.98)
         midi_path = compose_midi(game_plan['game_concept'])
@@ -552,7 +467,6 @@ def show_help_and_faq():
     - Scripts (for Unity, Unreal Engine, or Blender)
     - Additional elements like storyline, dialogue, game mechanics, and level design
     - Background music
-    - Game trailer (experimental)
     - MIDI theme (experimental)
     """)
     
@@ -569,7 +483,7 @@ def show_help_and_faq():
     - AI-generated content may require human review and refinement.
     - The app requires valid API keys for OpenAI and Replicate to function properly.
     - Large requests may take some time to process, depending on the selected options and server load.
-    - Experimental features (trailer and MIDI generation) may not always produce perfect results and might require manual adjustments.
+    - Experimental features (MIDI generation) may not always produce perfect results and might require manual adjustments.
     """)
 
 # Custom CSS for improved styling
@@ -635,7 +549,7 @@ with st.sidebar:
         show_help_and_faq()
 
 # Main content area
-tab1, tab2, tab3, tab4 = st.tabs(["Game Concept", "Image Generation", "Script Generation", "Additional Elements"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Game Concept", "Image Generation", "Script Generation", "Additional Elements", "Advanced Settings"])
 
 with tab1:
     st.markdown('<p class="section-header">Define Your Game</p>', unsafe_allow_html=True)
@@ -647,7 +561,7 @@ with tab2:
     st.markdown('<p class="info-text">Customize the types and number of images you want to generate for your game.</p>', unsafe_allow_html=True)
     
     for img_type in st.session_state.customization['image_types']:
-        col1, col2 = st.columns([3, 1])
+        col1, col2, col3 = st.columns([3, 1, 2])
         with col1:
             st.session_state.customization['image_count'][img_type] = st.number_input(
                 f"Number of {img_type} Images", 
@@ -660,6 +574,14 @@ with tab2:
                     "Make 3D",
                     value=st.session_state.customization['convert_to_3d'][img_type],
                     key=f"3d_checkbox_{img_type}"
+                )
+        with col3:
+            use_notes = st.checkbox(f"Image Notes for {img_type}", key=f"use_notes_{img_type}")
+            if use_notes:
+                st.session_state.customization['image_notes'][img_type] = st.text_input(
+                    f"Notes for {img_type}",
+                    value=st.session_state.customization['image_notes'].get(img_type, ''),
+                    key=f"notes_{img_type}"
                 )
 
 with tab3:
@@ -699,9 +621,18 @@ with tab4:
     st.markdown('<p class="section-header">Experimental Features</p>', unsafe_allow_html=True)
     st.markdown('<p class="info-text">Try out these experimental features to enhance your game plan.</p>', unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
-    with col2:
-        st.session_state.customization['experimental']['compose_midi'] = st.checkbox("Compose MIDI", value=st.session_state.customization['experimental']['compose_midi'])
+    st.session_state.customization['experimental']['compose_midi'] = st.checkbox("Compose MIDI", value=st.session_state.customization['experimental']['compose_midi'])
+
+with tab5:
+    st.markdown('<p class="section-header">Advanced Settings</p>', unsafe_allow_html=True)
+    st.markdown('<p class="info-text">Fine-tune your game generation process with these advanced options.</p>', unsafe_allow_html=True)
+    
+    # Add advanced settings here. For example:
+    st.session_state.customization['advanced'] = {
+        'temperature': st.slider("AI Temperature", 0.0, 1.0, 0.7, 0.1),
+        'max_tokens': st.number_input("Max Tokens for Text Generation", 100, 2000, 500, 100),
+        'image_size': st.selectbox("Image Size", ["256x256", "512x512", "1024x1024"], 1)
+    }
 
 # Generate Game Plan
 if st.button("Generate Game Plan", key="generate_button"):
@@ -758,10 +689,6 @@ if st.button("Generate Game Plan", key="generate_button"):
                 with st.expander(f"View {element_name.capitalize()}"):
                     st.write(element_content)
 
-        if 'trailer' in game_plan:
-            st.subheader("Game Trailer")
-            st.video(game_plan['trailer'])
-
         if 'midi' in game_plan:
             st.subheader("Game Theme (MIDI)")
             st.audio(game_plan['midi'], format='audio/midi')
@@ -810,10 +737,6 @@ if st.button("Generate Game Plan", key="generate_button"):
                     zip_file.writestr("background_music.mp3", music_response.content)
                 except requests.RequestException as e:
                     st.error(f"Error downloading music: {str(e)}")
-
-            # Add trailer if generated
-            if 'trailer' in game_plan:
-                zip_file.write(game_plan['trailer'], "game_trailer.mp4")
 
             # Add MIDI if generated
             if 'midi' in game_plan:
