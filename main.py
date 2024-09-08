@@ -529,8 +529,6 @@ if st.button("Generate Game Plan", key="generate_button"):
             
             # Add images and 3D models
             if 'images' in game_plan:
-                for asset_name, asset_url in game_plan['# Add images and 3D models
-            if 'images' in game_plan:
                 for asset_name, asset_url in game_plan['images'].items():
                     if isinstance(asset_url, dict):  # This is a 3D model
                         if asset_url.get('glb'):
@@ -561,19 +559,6 @@ if st.button("Generate Game Plan", key="generate_button"):
             if 'music' in game_plan:
                 music_response = requests.get(game_plan['music'])
                 zip_file.writestr("background_music.mp3", music_response.content)
-
-        st.download_button(
-            "Download Game Plan ZIP",
-            zip_buffer.getvalue(),
-            file_name="game_plan.zip",
-            mime="application/zip",
-            help="Download a ZIP file containing all generated assets and documents."
-        )
-
-        # Display generated music if applicable
-        if 'music' in game_plan:
-            st.subheader("Generated Music")
-            st.audio(game_plan['music'], format='audio/mp3')
 
 # Footer
 st.markdown("---")
