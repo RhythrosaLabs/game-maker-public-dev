@@ -6,7 +6,7 @@ import zipfile
 from io import BytesIO
 from PIL import Image
 import replicate
-import base64
+import base64 
 
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
@@ -524,13 +524,7 @@ with tab2:
                 min_value=0, 
                 value=st.session_state.customization['image_count'][img_type]
             )
-        with col2:
-            if img_type in ['Character', 'Enemy', 'Object', 'UI']:
-                st.session_state.customization['convert_to_3d'][img_type] = st.checkbox(
-                    "Make 3D",
-                    value=st.session_state.customization['convert_to_3d'][img_type],
-                    key=f"3d_checkbox_{img_type}"
-                )
+        
 
 with tab3:
     st.markdown('<p class="section-header">Script Generation</p>', unsafe_allow_html=True)
