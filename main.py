@@ -256,9 +256,7 @@ def generate_scripts(customization, game_concept):
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
             desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
-            Certainly! I'll continue with the rest of the code:
-
-```python
+            
             if customization['code_types']['unity']:
                 unity_script = generate_content(f"Create a comprehensive Unity C# script for {desc}. Include detailed comments, error handling, and optimize for performance. Ensure the script follows Unity best practices and is easily integrable into a larger project.", "Unity game development")
                 scripts[f"unity_{script_type.lower()}_script_{i + 1}.cs"] = unity_script
