@@ -700,8 +700,6 @@ with tab4:
     st.markdown('<p class="info-text">Try out these experimental features to enhance your game plan.</p>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
-    with col1:
-        st.session_state.customization['experimental']['create_trailer'] = st.checkbox("Create Trailer", value=st.session_state.customization['experimental']['create_trailer'])
     with col2:
         st.session_state.customization['experimental']['compose_midi'] = st.checkbox("Compose MIDI", value=st.session_state.customization['experimental']['compose_midi'])
 
