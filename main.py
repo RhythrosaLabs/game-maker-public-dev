@@ -393,7 +393,6 @@ st.markdown('<p class="main-header">Game Dev Automation</p>', unsafe_allow_html=
 
 # Sidebar
 with st.sidebar:
-    st.image("https://your-logo-url.com/logo.png", width=100)  # Replace with your logo URL
     st.markdown("## Settings")
 
     # API Key Inputs
