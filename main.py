@@ -594,4 +594,4 @@ if st.button("Generate Game Plan", key="generate_button"):
 
 # Footer
 st.markdown("---")
-st.markdown("Created by Daniel Sheils.")
+st.markdown("Created by [Daniel Sheils](http://linkedin.com/in/danielsheils/)", unsafe_allow_html=True)
