@@ -209,7 +209,16 @@ def generate_images(customization, game_concept):
         for i in range(customization['image_count'].get(img_type, 0)):
             prompt = f"{image_prompts[img_type]} The design should fit the following game concept: {game_concept}. Variation {i + 1}"
             size = sizes[img_type]
-            image_url = generate_image(prompt, size)
+            
+            # Use custom parameters for SD Flux-1
+            if customization['image_model'] == 'SD Flux-1':
+                steps = customization.get(f'{img_type.lower()}_steps', 25)
+                guidance = customization.get('guidance', 3.0)
+                interval = customization.get('interval', 2.0)
+                image_url = generate_image(prompt, size, steps=steps, guidance=guidance, interval=interval)
+            else:
+                image_url = generate_image(prompt, size)
+            
             if image_url and not isinstance(image_url, str) and not image_url.startswith('Error'):
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
                 if customization['convert_to_3d'].get(img_type, False):
@@ -220,7 +229,6 @@ def generate_images(customization, game_concept):
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
 
     return images
-
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
     script_descriptions = {
