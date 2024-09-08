@@ -326,6 +326,12 @@ def generate_additional_elements(game_concept, elements_to_generate):
 # Create trailer function
 def create_trailer(images, music_url, game_concept):
     try:
+        if not images:
+            raise ValueError("No images available for trailer creation.")
+        
+        if not music_url:
+            raise ValueError("No music available for trailer creation.")
+
         # Download music
         music_response = requests.get(music_url)
         music_response.raise_for_status()
@@ -334,41 +340,59 @@ def create_trailer(images, music_url, game_concept):
         # Create video clips from images
         clips = []
         for i, (img_name, img_url) in enumerate(images.items()):
-            img_response = requests.get(img_url)
-            img_response.raise_for_status()
-            img = Image.open(BytesIO(img_response.content))
-            img_array = np.array(img)
-            
-            # Generate caption
-            caption = generate_content(f"Create a short, catchy caption for this image in the context of the game: {game_concept}", "game marketing")
-            
-            # Create text clip
-            text_clip = mp.TextClip(caption, fontsize=30, color='white', bg_color='black', font='Arial')
-            text_clip = text_clip.set_pos('bottom').set_duration(2)
-            
-            # Create image clip
-            img_clip = mp.ImageClip(img_array).set_duration(2)
-            
-            # Combine image and text
-            combined_clip = mp.CompositeVideoClip([img_clip, text_clip])
-            clips.append(combined_clip)
+            try:
+                # Download image
+                img_response = requests.get(img_url)
+                img_response.raise_for_status()
+                img = Image.open(BytesIO(img_response.content))
+                img_array = np.array(img)
+                
+                # Generate caption
+                caption = generate_content(f"Create a short, catchy caption for this {img_name} in the context of the game: {game_concept}", "game marketing")
+                
+                # Create text clip
+                text_clip = mp.TextClip(caption, fontsize=30, color='white', bg_color='rgba(0,0,0,0.5)', font='Arial', size=(img.width, None))
+                text_clip = text_clip.set_pos(('center', 'bottom')).set_duration(2)
+                
+                # Create image clip
+                img_clip = mp.ImageClip(img_array).set_duration(2)
+                
+                # Resize clip to 1080p if larger
+                if img_clip.w > 1920 or img_clip.h > 1080:
+                    img_clip = img_clip.resize(height=1080) if img_clip.w > img_clip.h else img_clip.resize(width=1920)
+                
+                # Combine image and text
+                combined_clip = mp.CompositeVideoClip([img_clip, text_clip])
+                clips.append(combined_clip)
+            except Exception as e:
+                st.warning(f"Error processing image {img_name}: {str(e)}")
+                continue
+        
+        if not clips:
+            raise ValueError("No valid images could be processed for the trailer.")
         
         # Concatenate clips
         final_clip = mp.concatenate_videoclips(clips)
         
         # Add music
-        audio = mp.AudioFileClip(music_file.name).subclip(0, final_clip.duration)
+        audio = mp.AudioFileClip(music_file.name)
+        audio = audio.subclip(0, final_clip.duration)
         final_clip = final_clip.set_audio(audio)
+        
+        # Add fade in and fade out
+        final_clip = final_clip.fade_in(0.5).fade_out(0.5)
         
         # Write video file
         output_path = "game_trailer.mp4"
-        final_clip.write_videofile(output_path, fps=24)
+        final_clip.write_videofile(output_path, fps=24, codec='libx264', audio_codec='aac')
         
         return output_path
+    except ValueError as ve:
+        st.warning(f"Error creating trailer: {str(ve)}")
+        return None
     except Exception as e:
         st.error(f"Error creating trailer: {str(e)}")
         return None
-
 # Compose MIDI function
 def compose_midi(game_concept):
     try:
