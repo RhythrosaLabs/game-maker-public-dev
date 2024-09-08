@@ -37,7 +37,7 @@ if 'customization' not in st.session_state:
             'level_design': False
         },
         'image_model': 'dall-e-3',
-        'chat_model': 'gpt-4',
+        'chat_model': 'gpt-4o-mini',
     }
 
 # Load API keys from a file
