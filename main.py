@@ -1,3 +1,8 @@
+Certainly! I'll provide the entire updated code from start to finish. Here's the complete code with the requested changes:
+
+
+
+```python
 import streamlit as st
 import requests
 import json
@@ -103,6 +108,7 @@ def generate_content(prompt, role):
         return "Error: Invalid chat model selected."
 
 # Generate images using selected image model
+# Generate images using selected image model
 def generate_image(prompt, size):
     if st.session_state.customization['image_model'] == 'dall-e-3':
         data = {
@@ -128,42 +134,26 @@ def generate_image(prompt, size):
 
         except requests.RequestException as e:
             return f"Error: Unable to generate image: {str(e)}"
-    else:
+    elif st.session_state.customization['image_model'] == 'SD Flux-1':
         replicate_client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
         
         try:
-            if st.session_state.customization['image_model'] == 'sdxl':
-                output = replicate_client.run(
-                    "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-                    input={
-                        "prompt": prompt,
-                        "width": size[0],
-                        "height": size[1],
-                        "num_outputs": 1,
-                        "scheduler": "K_EULER",
-                        "num_inference_steps": 50,
-                        "guidance_scale": 7.5,
-                        "prompt_strength": 0.8,
-                    }
-                )
-            elif st.session_state.customization['image_model'] == 'midjourney':
-                output = replicate_client.run(
-                    "tstramer/midjourney-diffusion:436b051ebd8f68d23e83d22de5e198e0995357afef113768c20f0b6fcef23c8b",
-                    input={
-                        "prompt": prompt,
-                        "width": size[0],
-                        "height": size[1],
-                        "num_outputs": 1,
-                        "num_inference_steps": 50,
-                        "guidance_scale": 7.5,
-                    }
-                )
-            else:
-                return "Error: Invalid image model selected."
-            
+            output = replicate_client.run(
+                "black-forest-labs/flux-pro",
+                input={
+                    "prompt": prompt,
+                    # Add any additional parameters required by the Flux-1 model
+                    # For example:
+                    # "width": size[0],
+                    # "height": size[1],
+                    # You may need to adjust these based on the model's schema
+                }
+            )
             return output[0] if output else None
         except Exception as e:
             return f"Error: Unable to generate image: {str(e)}"
+    else:
+        return "Error: Invalid image model selected."
 
 # Convert image to 3D model using Replicate API
 def convert_image_to_3d(image_url):
@@ -264,14 +254,16 @@ def generate_scripts(customization, game_concept):
         'Player': f"Create a comprehensive player character script for a 2D game. The character should have WASD movement, jumping with spacebar, and an action button (e.g., attack or interact). Implement smooth movement, basic physics (gravity and collision), and state management (idle, walking, jumping, attacking). The player should fit the following game concept: {game_concept}. Include comments explaining each major component and potential areas for expansion.",
         'Enemy': f"Develop a detailed enemy AI script for a 2D game. The enemy should have basic pathfinding, player detection, and attack mechanics. Implement different states (idle, patrolling, chasing, attacking) and ensure smooth transitions between them. The enemy behavior should fit the following game concept: {game_concept}. Include comments explaining the AI logic and suggestions for scaling difficulty.",
         'Game Object': f"Script a versatile game object that can be used for various purposes in a 2D game. This could be a collectible item, a trap, or an interactive element. Implement functionality for player interaction, animation states, and any special effects. The object should fit the following game concept: {game_concept}. Include comments on how to easily modify the script for different object types.",
-       'Level Background': f"Create a script to manage the level background in a 2D game. This should handle parallax scrolling with multiple layers, potential day/night cycles, and any interactive background elements. The background should fit the following game concept: {game_concept}. Include optimization tips and comments on how to extend the script for more complex backgrounds."
+        'Level Background': f"Create a script to manage the level background in a 2D game. This should handle parallax scrolling with multiple layers, potential day/night cycles, and any interactive background elements. The background should fit the following game concept: {game_concept}. Include optimization tips and comments on how to extend the script for more complex backgrounds."
     }
     
     scripts = {}
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
             desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
-            
+            Certainly! I'll continue with the rest of the code:
+
+```python
             if customization['code_types']['unity']:
                 unity_script = generate_content(f"Create a comprehensive Unity C# script for {desc}. Include detailed comments, error handling, and optimize for performance. Ensure the script follows Unity best practices and is easily integrable into a larger project.", "Unity game development")
                 scripts[f"unity_{script_type.lower()}_script_{i + 1}.cs"] = unity_script
@@ -414,16 +406,12 @@ with st.sidebar:
     )
     st.session_state.customization['image_model'] = st.selectbox(
         "Select Image Generation Model",
-        options=['dall-e-3', 'sdxl', 'midjourney'],
+        options=['dall-e-3', 'SD Flux-1'],
         index=0
     )
 
-    # Replicate Options
-    st.markdown("### Additional Options")
-    st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Music", value=st.session_state.customization['use_replicate']['generate_music'])
-
 # Main content area
-tab1, tab2, tab3, tab4 = st.tabs(["Game Concept", "Asset Generation", "Script Generation", "Additional Elements"])
+tab1, tab2, tab3, tab4 = st.tabs(["Game Concept", "Image Generation", "Script Generation", "Additional Elements"])
 
 with tab1:
     st.markdown('<p class="section-header">Define Your Game</p>', unsafe_allow_html=True)
@@ -431,8 +419,8 @@ with tab1:
     user_prompt = st.text_area("Game Concept", "Enter a detailed description of your game here...", height=200)
 
 with tab2:
-    st.markdown('<p class="section-header">Asset Generation</p>', unsafe_allow_html=True)
-    st.markdown('<p class="info-text">Customize the types and number of assets you want to generate for your game.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Image Generation</p>', unsafe_allow_html=True)
+    st.markdown('<p class="info-text">Customize the types and number of images you want to generate for your game.</p>', unsafe_allow_html=True)
     
     for img_type in st.session_state.customization['image_types']:
         col1, col2 = st.columns([3, 1])
@@ -478,6 +466,7 @@ with tab4:
     with col1:
         st.session_state.customization['generate_elements']['storyline'] = st.checkbox("Detailed Storyline", value=st.session_state.customization['generate_elements']['storyline'])
         st.session_state.customization['generate_elements']['dialogue'] = st.checkbox("Sample Dialogue", value=st.session_state.customization['generate_elements']['dialogue'])
+        st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Music", value=st.session_state.customization['use_replicate']['generate_music'])
     with col2:
         st.session_state.customization['generate_elements']['game_mechanics'] = st.checkbox("Game Mechanics Description", value=st.session_state.customization['generate_elements']['game_mechanics'])
         st.session_state.customization['generate_elements']['level_design'] = st.checkbox("Level Design Document", value=st.session_state.customization['generate_elements']['level_design'])
@@ -547,6 +536,8 @@ if st.button("Generate Game Plan", key="generate_button"):
             
             # Add images and 3D models
             if 'images' in game_plan:
+                for asset_name, asset_url in game_plan['# Add images and 3D models
+            if 'images' in game_plan:
                 for asset_name, asset_url in game_plan['images'].items():
                     if isinstance(asset_url, dict):  # This is a 3D model
                         if asset_url.get('glb'):
@@ -591,7 +582,12 @@ if st.button("Generate Game Plan", key="generate_button"):
             st.subheader("Generated Music")
             st.audio(game_plan['music'], format='audio/mp3')
 
-
 # Footer
 st.markdown("---")
-st.markdown("Created by [Daniel Sheils](http://linkedin.com/in/danielsheils/)", unsafe_allow_html=True)
+st.markdown("""
+    Created by [Daniel Sheils](http://linkedin.com/in/danielsheils/) | 
+    [GitHub](https://github.com/RhythrosaLabs/game-maker) | 
+    [Twitter](https://twitter.com/rhythrosalabs) | 
+    [Instagram](https://instagram.com/rhythrosalabs) | 
+    [Facebook](https://facebook.com/rhythrosalabs)
+    """, unsafe_allow_html=True)
