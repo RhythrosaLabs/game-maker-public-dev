@@ -38,6 +38,7 @@ if 'customization' not in st.session_state:
         },
         'image_model': 'dall-e-3',
         'chat_model': 'gpt-4o-mini',
+        'code_model': 'gpt-4o-mini',
     }
 
 # Load API keys from a file
@@ -105,7 +106,6 @@ def generate_content(prompt, role):
 # Generate images using selected image model
 def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
     if st.session_state.customization['image_model'] == 'dall-e-3':
-        # DALL-E 3 code remains unchanged
         data = {
             "model": "dall-e-3",
             "prompt": prompt,
@@ -158,6 +158,16 @@ def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
             return output
         except Exception as e:
             return f"Error: Unable to generate image using SD Flux-1: {str(e)}"
+    elif st.session_state.customization['image_model'] == 'SDXL Lightning':
+        try:
+            client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+            output = client.run(
+                "bytedance/sdxl-lightning-4step:5f24084160c9089501c1b3545d9be3c27883ae2239b6f412990e82d4a6210f8f",
+                input={"prompt": prompt}
+            )
+            return output[0] if output else None
+        except Exception as e:
+            return f"Error: Unable to generate image using SDXL Lightning: {str(e)}"
     else:
         return "Error: Invalid image model selected."
 
@@ -189,7 +199,8 @@ def convert_image_to_3d(image_url):
 # Generate music using Replicate's MusicGen
 def generate_music(prompt):
     try:
-        output = replicate.run(
+        client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+        output = client.run(
             "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
             input={
                 "prompt": prompt,
@@ -198,9 +209,13 @@ def generate_music(prompt):
                 "normalization_strategy": "peak"
             }
         )
-        return output
+        if isinstance(output, str) and output.startswith("http"):
+            return output
+        else:
+            return None
     except Exception as e:
-        return f"Error: Unable to generate music: {str(e)}"
+        st.error(f"Error: Unable to generate music: {str(e)}")
+        return None
 
 # Generate multiple images based on customization settings
 def generate_images(customization, game_concept):
@@ -231,14 +246,7 @@ def generate_images(customization, game_concept):
             prompt = f"{image_prompts[img_type]} The design should fit the following game concept: {game_concept}. Variation {i + 1}"
             size = sizes[img_type]
             
-            # Use custom parameters for SD Flux-1
-            if customization['image_model'] == 'SD Flux-1':
-                steps = customization.get(f'{img_type.lower()}_steps', 25)
-                guidance = customization.get('guidance', 3.0)
-                interval = customization.get('interval', 2.0)
-                image_url = generate_image(prompt, size, steps=steps, guidance=guidance, interval=interval)
-            else:
-                image_url = generate_image(prompt, size)
+            image_url = generate_image(prompt, size)
             
             if image_url and not isinstance(image_url, str) and not image_url.startswith('Error'):
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
@@ -250,6 +258,7 @@ def generate_images(customization, game_concept):
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
 
     return images
+
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
     script_descriptions = {
@@ -264,18 +273,29 @@ def generate_scripts(customization, game_concept):
         for i in range(customization['script_count'].get(script_type, 0)):
             desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
             
-            if customization['code_types']['unity']:
-                unity_script = generate_content(f"Create a comprehensive Unity C# script for {desc}. Include detailed comments, error handling, and optimize for performance. Ensure the script follows Unity best practices and is easily integrable into a larger project.", "Unity game development")
-                scripts[f"unity_{script_type.lower()}_script_{i + 1}.cs"] = unity_script
-            
-            if customization['code_types']['unreal']:
-                unreal_script = generate_content(f"Create a comprehensive Unreal Engine C++ script for {desc}. Include detailed comments, error handling, and optimize for performance. Ensure the script follows Unreal Engine best practices and can be easily integrated into a Blueprint system.", "Unreal Engine game development")
-                scripts[f"unreal_{script_type.lower()}_script_{i + 1}.cpp"] = unreal_script
-            
-            if customization['code_types']['blender']:
-                blender_script = generate_content(f"Create a comprehensive Blender Python script for {desc}. The script should create a detailed 3D model suitable for game development, including proper mesh topology, UV mapping, materials, and possibly animations. Include detailed comments, error handling, and tips for optimizing the model for game engines.", "Blender 3D modeling and animation")
-                scripts[f"blender_{script_type.lower()}_script_{i + 1}.py"] = blender_script
-    
+            if customization['code_model'] in ['gpt-4o', 'gpt-4o-mini']:
+                # Use OpenAI API for GPT-4 models
+                script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
+            elif customization['code_model'] == 'CodeLlama-34B':
+                # Use Replicate API for CodeLlama
+                try:
+                    client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+                    output = client.run(
+                        "andreasjansson/codellama-34b-instruct-gguf:97a1fb465d5cdf2854c89ebeaee3ceb353206b8187b665a83bcf6efd21e534ab",
+                        input={
+                            "prompt": f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.",
+                            "grammar": "root        ::= \"```python\\n\" code \"```\"\ncode        ::= [^`]+",
+                            "jsonschema": ""
+                        }
+                    )
+                    script_code = ''.join(output)
+                except Exception as e:
+                    script_code = f"Error generating script: {str(e)}"
+            else:
+                script_code = "Error: Invalid code model selected."
+
+            scripts[f"{script_type.lower()}_script_{i + 1}.py"] = script_code
+
     return scripts
 
 # Generate additional game elements
@@ -366,6 +386,62 @@ def display_image(image_url, caption):
         st.warning(f"Unable to display image: {caption}")
         st.error(f"Error: {str(e)}")
 
+# Help and FAQ function
+def show_help_and_faq():
+    st.markdown("## Help & FAQ")
+    
+    st.markdown("### How does this app work?")
+    st.write("""
+    1. You input your game concept and customize settings.
+    2. The app uses AI models to generate various game elements (concept, world, characters, plot, images, scripts, etc.).
+    3. All generated content is compiled into a downloadable ZIP file.
+    """)
+    
+    st.markdown("### What are the different AI models used?")
+    st.markdown("""
+    #### Chat Models:
+    - **GPT-4**: OpenAI's most advanced language model, capable of understanding and generating human-like text.
+    - **GPT-4o-mini**: A more lightweight version of GPT-4, optimized for faster responses.
+    - **Llama**: An open-source large language model developed by Meta AI.
+
+    #### Image Models:
+    - **DALL-E 3**: OpenAI's advanced text-to-image generation model.
+    - **SD Flux-1**: A stable diffusion model optimized for fast image generation.
+    - **SDXL Lightning**: A high-speed version of Stable Diffusion XL for rapid image creation.
+
+    #### Code Models:
+    - **GPT-4o**: OpenAI's GPT-4 model optimized for code generation.
+    - **GPT-4o-mini**: A lightweight version of GPT-4o for faster code generation.
+    - **CodeLlama-34B**: A large language model specifically trained for code generation tasks.
+    """)
+    
+    st.markdown("### What types of content can be generated?")
+    st.write("""
+    - Game concept
+    - World concept
+    - Character concepts
+    - Plot
+    - Images (characters, enemies, backgrounds, objects, textures, sprites, UI)
+    - Scripts (for Unity, Unreal Engine, or Blender)
+    - Additional elements like storyline, dialogue, game mechanics, and level design
+    - Background music
+    """)
+    
+    st.markdown("### How can I use the generated content?")
+    st.write("""
+    The generated content is meant to serve as a starting point or inspiration for your game development process. 
+    You can use it as a foundation to build upon, modify, or adapt as needed for your specific game project.
+    Always ensure you have the right to use AI-generated content in your jurisdiction and for your intended purpose.
+    """)
+    
+    st.markdown("### Are there any limitations?")
+    st.write("""
+    - The quality and relevance of the generated content depend on the input prompts and selected AI models.
+    - AI-generated content may require human review and refinement.
+    - The app requires valid API keys for OpenAI and Replicate to function properly.
+    - Large requests may take some time to process, depending on the selected options and server load.
+    """)
+
 # Custom CSS for improved styling
 st.markdown("""
     <style>
@@ -416,9 +492,17 @@ with st.sidebar:
     )
     st.session_state.customization['image_model'] = st.selectbox(
         "Select Image Generation Model",
-        options=['dall-e-3', 'SD Flux-1'],
+        options=['dall-e-3', 'SD Flux-1', 'SDXL Lightning'],
         index=0
     )
+    st.session_state.customization['code_model'] = st.selectbox(
+        "Select Code Generation Model",
+        options=['gpt-4o', 'gpt-4o-mini', 'CodeLlama-34B'],
+        index=0
+    )
+
+    if st.button("Help / FAQ"):
+        show_help_and_faq()
 
 # Main content area
 tab1, tab2, tab3, tab4 = st.tabs(["Game Concept", "Image Generation", "Script Generation", "Additional Elements"])
@@ -476,10 +560,11 @@ with tab4:
     with col1:
         st.session_state.customization['generate_elements']['storyline'] = st.checkbox("Detailed Storyline", value=st.session_state.customization['generate_elements']['storyline'])
         st.session_state.customization['generate_elements']['dialogue'] = st.checkbox("Sample Dialogue", value=st.session_state.customization['generate_elements']['dialogue'])
-        st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Music", value=st.session_state.customization['use_replicate']['generate_music'])
     with col2:
         st.session_state.customization['generate_elements']['game_mechanics'] = st.checkbox("Game Mechanics Description", value=st.session_state.customization['generate_elements']['game_mechanics'])
         st.session_state.customization['generate_elements']['level_design'] = st.checkbox("Level Design Document", value=st.session_state.customization['generate_elements']['level_design'])
+    
+    st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Background Music", value=st.session_state.customization['use_replicate']['generate_music'])
 
 # Generate Game Plan
 if st.button("Generate Game Plan", key="generate_button"):
@@ -573,9 +658,13 @@ if st.button("Generate Game Plan", key="generate_button"):
                     zip_file.writestr(f"{element_name}.txt", element_content)
             
             # Add music if generated
-            if 'music' in game_plan:
-                music_response = requests.get(game_plan['music'])
-                zip_file.writestr("background_music.mp3", music_response.content)
+            if 'music' in game_plan and game_plan['music']:
+                try:
+                    music_response = requests.get(game_plan['music'])
+                    music_response.raise_for_status()
+                    zip_file.writestr("background_music.mp3", music_response.content)
+                except requests.RequestException as e:
+                    st.error(f"Error downloading music: {str(e)}")
 
         st.download_button(
             "Download Game Plan ZIP",
@@ -586,9 +675,11 @@ if st.button("Generate Game Plan", key="generate_button"):
         )
 
         # Display generated music if applicable
-        if 'music' in game_plan:
+        if 'music' in game_plan and game_plan['music']:
             st.subheader("Generated Music")
             st.audio(game_plan['music'], format='audio/mp3')
+        else:
+            st.warning("No music was generated or an error occurred during music generation.")
 
 # Footer
 st.markdown("---")
@@ -596,8 +687,7 @@ st.markdown("""
     Created by [Daniel Sheils](http://linkedin.com/in/danielsheils/) | 
     [GitHub](https://github.com/RhythrosaLabs/game-maker) | 
     [Twitter](https://twitter.com/rhythrosalabs) | 
-    [Instagram](https://instagram.com/rhythrosalabs) | 
-    [Facebook](https://facebook.com/rhythrosalabs)
+    [Instagram](https://instagram.com/rhythrosalabs)
     """, unsafe_allow_html=True)
 
 # Initialize Replicate client
@@ -611,5 +701,3 @@ if __name__ == "__main__":
     if openai_key and replicate_key:
         st.session_state.api_keys['openai'] = openai_key
         st.session_state.api_keys['replicate'] = replicate_key
-    
-    # The rest of the app is defined by the Streamlit layout above
