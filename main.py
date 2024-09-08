@@ -265,7 +265,7 @@ def generate_images(customization, game_concept):
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
 
     return images
-
+    
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
     script_descriptions = {
@@ -549,7 +549,7 @@ with st.sidebar:
         show_help_and_faq()
 
 # Main content area
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["Game Concept", "Image Generation", "Script Generation", "Additional Elements", "Advanced Settings"])
+tab1, tab2, tab3, tab4 = st.tabs(["Game Concept", "Image Generation", "Script Generation", "Additional Elements"])
 
 with tab1:
     st.markdown('<p class="section-header">Define Your Game</p>', unsafe_allow_html=True)
@@ -580,7 +580,7 @@ with tab2:
             if use_notes:
                 st.session_state.customization['image_notes'][img_type] = st.text_input(
                     f"Notes for {img_type}",
-                    value=st.session_state.customization['image_notes'].get(img_type, ''),
+                    value=st.session_state.customization['image_notes'][img_type],
                     key=f"notes_{img_type}"
                 )
 
