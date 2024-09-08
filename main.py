@@ -103,8 +103,9 @@ def generate_content(prompt, role):
         return "Error: Invalid chat model selected."
 
 # Generate images using selected image model
-def generate_image(prompt, size):
+def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
     if st.session_state.customization['image_model'] == 'dall-e-3':
+        # DALL-E 3 code remains unchanged
         data = {
             "model": "dall-e-3",
             "prompt": prompt,
@@ -130,9 +131,27 @@ def generate_image(prompt, size):
             return f"Error: Unable to generate image: {str(e)}"
     elif st.session_state.customization['image_model'] == 'SD Flux-1':
         try:
+            # Convert size to aspect ratio
+            width, height = size
+            if width == height:
+                aspect_ratio = "1:1"
+            elif width > height:
+                aspect_ratio = "16:9" if width / height > 1.7 else "3:2"
+            else:
+                aspect_ratio = "9:16" if height / width > 1.7 else "2:3"
+
             output = replicate.run(
                 "black-forest-labs/flux-pro",
-                input={"prompt": prompt}
+                input={
+                    "prompt": prompt,
+                    "aspect_ratio": aspect_ratio,
+                    "steps": steps,
+                    "guidance": guidance,
+                    "interval": interval,
+                    "safety_tolerance": 2,
+                    "output_format": "png",
+                    "output_quality": 100
+                }
             )
             return output
         except Exception as e:
