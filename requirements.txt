@@ -1,3 +1,7 @@
 streamlit
 requests
 flask
+pillow
+replicate
+moviepy
+numpy
