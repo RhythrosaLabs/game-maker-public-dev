@@ -113,7 +113,6 @@ def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
             "n": 1,
             "response_format": "url"
         }
-
         try:
             response = requests.post(DALLE_API_URL, headers=get_openai_headers(), json=data)
             response.raise_for_status()
@@ -121,12 +120,9 @@ def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
             if "data" not in response_data:
                 error_message = response_data.get("error", {}).get("message", "Unknown error")
                 return f"Error: {error_message}"
-
             if not response_data["data"]:
                 return "Error: No data returned from API."
-
             return response_data["data"][0]["url"]
-
         except requests.RequestException as e:
             return f"Error: Unable to generate image: {str(e)}"
     elif st.session_state.customization['image_model'] == 'SD Flux-1':
@@ -140,7 +136,13 @@ def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
             else:
                 aspect_ratio = "9:16" if height / width > 1.7 else "2:3"
 
-            output = replicate.run(
+            # Debug print statement to check API key
+            print(f"Debug: Replicate API key: {st.session_state.api_keys['replicate'][:5]}...")
+
+            # Initialize Replicate client with API key
+            client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+
+            output = client.run(
                 "black-forest-labs/flux-pro",
                 input={
                     "prompt": prompt,
