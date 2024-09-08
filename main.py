@@ -12,7 +12,6 @@ from midiutil import MIDIFile
 import numpy as np
 import tempfile
 
-
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
 DALLE_API_URL = "https://api.openai.com/v1/images/generations"
@@ -29,7 +28,7 @@ if 'customization' not in st.session_state:
         'image_count': {t: 0 for t in ['Character', 'Enemy', 'Background', 'Object', 'Texture', 'Sprite', 'UI']},
         'script_count': {t: 0 for t in ['Player', 'Enemy', 'Game Object', 'Level Background']},
         'use_replicate': {'generate_music': False},
-        'convert_to_3d': {t: False for t in ['Character', 'Enemy', 'Object', 'UI']},
+        'convert_to_3d': False,  # Changed to a single boolean for Character only
         'code_types': {'unity': False, 'unreal': False, 'blender': False},
         'generate_elements': {
             'game_concept': True,
@@ -145,9 +144,6 @@ def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
             else:
                 aspect_ratio = "9:16" if height / width > 1.7 else "2:3"
 
-            # Debug print statement to check API key
-            print(f"Debug: Replicate API key: {st.session_state.api_keys['replicate'][:5]}...")
-
             # Initialize Replicate client with API key
             client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
 
@@ -184,23 +180,14 @@ def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
 def convert_image_to_3d(image_url):
     try:
         output = replicate.run(
-            "camenduru/lgm:d2870893aa115773465a823fe70fd446673604189843f39a99642dd9171e05e2",
+            "camenduru/tripo-sr:e0d3fe8abce3ba86497ea3530d9eae59af7b2231b6c82bedfc32b0732d35ec3a",
             input={
-                "input_image": image_url,
-                "prompt": "a 3D model",
-                "negative_prompt": "ugly, blurry, pixelated, obscure, unnatural colors, poor lighting, dull, unclear, cropped, lowres, low quality, artifacts, duplicate",
-                "seed": 42
+                "image_path": image_url,
+                "foreground_ratio": 0.85,
+                "do_remove_background": True
             }
         )
-        
-        result = {'glb': None, 'obj': None}
-        for url in output:
-            if url.endswith('.glb'):
-                result['glb'] = url
-            elif url.endswith('.obj'):
-                result['obj'] = url
-        
-        return result if (result['glb'] or result['obj']) else None
+        return output
     except Exception as e:
         st.error(f"Error during 3D conversion: {str(e)}")
         return None
@@ -259,9 +246,9 @@ def generate_images(customization, game_concept):
             
             if image_url and not isinstance(image_url, str) and not image_url.startswith('Error'):
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
-                if customization['convert_to_3d'].get(img_type, False):
+                if img_type == 'Character' and customization['convert_to_3d']:
                     model_url = convert_image_to_3d(image_url)
-                    if model_url and not model_url.startswith('Error'):
+                    if model_url and not isinstance(model_url, str):
                         images[f"{img_type.lower()}_3d_model_{i + 1}"] = model_url
             else:
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
@@ -655,10 +642,10 @@ with tab2:
                 value=st.session_state.customization['image_count'][img_type]
             )
         with col2:
-            if img_type in ['Character', 'Enemy', 'Object', 'UI']:
-                st.session_state.customization['convert_to_3d'][img_type] = st.checkbox(
+            if img_type == 'Character':
+                st.session_state.customization['convert_to_3d'] = st.checkbox(
                     "Make 3D",
-                    value=st.session_state.customization['convert_to_3d'][img_type],
+                    value=st.session_state.customization['convert_to_3d'],
                     key=f"3d_checkbox_{img_type}"
                 )
 
@@ -700,6 +687,8 @@ with tab4:
     st.markdown('<p class="info-text">Try out these experimental features to enhance your game plan.</p>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
+    with col1:
+        st.session_state.customization['experimental']['create_trailer'] = st.checkbox("Create Game Trailer", value=st.session_state.customization['experimental']['create_trailer'])
     with col2:
         st.session_state.customization['experimental']['compose_midi'] = st.checkbox("Compose MIDI", value=st.session_state.customization['experimental']['compose_midi'])
 
@@ -735,12 +724,9 @@ if st.button("Generate Game Plan", key="generate_button"):
             st.subheader("Generated Assets")
             st.write("### Images")
             for img_name, img_url in game_plan['images'].items():
-                if isinstance(img_url, dict):  # This is a 3D model
+                if img_name.startswith('character') and img_name.endswith('3d_model'):
                     st.write(f"{img_name}:")
-                    if img_url.get('glb'):
-                        st.write(f"[View 3D Model (GLB)]({img_url['glb']})")
-                    if img_url.get('obj'):
-                        st.write(f"[View 3D Model (OBJ)]({img_url['obj']})")
+                    st.write(f"[View 3D Model]({img_url})")
                 elif isinstance(img_url, str) and not img_url.startswith('Error'):
                     display_image(img_url, img_name)
                 else:
@@ -777,13 +763,9 @@ if st.button("Generate Game Plan", key="generate_button"):
             # Add images and 3D models
             if 'images' in game_plan:
                 for asset_name, asset_url in game_plan['images'].items():
-                    if isinstance(asset_url, dict):  # This is a 3D model
-                        if asset_url.get('glb'):
-                            glb_response = requests.get(asset_url['glb'])
-                            zip_file.writestr(f"{asset_name}.glb", glb_response.content)
-                        if asset_url.get('obj'):
-                            obj_response = requests.get(asset_url['obj'])
-                            zip_file.writestr(f"{asset_name}.obj", obj_response.content)
+                    if asset_name.startswith('character') and asset_name.endswith('3d_model'):
+                        model_response = requests.get(asset_url)
+                        zip_file.writestr(f"{asset_name}.glb", model_response.content)
                     elif isinstance(asset_url, str) and asset_url.startswith('http'):
                         img_response = requests.get(asset_url)
                         img = Image.open(BytesIO(img_response.content))
