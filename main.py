@@ -7,6 +7,9 @@ from io import BytesIO
 from PIL import Image
 import replicate
 import base64
+import moviepy.editor as mp
+from midiutil import MIDIFile
+import numpy as np
 
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
@@ -39,6 +42,10 @@ if 'customization' not in st.session_state:
         'image_model': 'dall-e-3',
         'chat_model': 'gpt-4o-mini',
         'code_model': 'gpt-4o-mini',
+        'experimental': {
+            'create_trailer': False,
+            'compose_midi': False
+        }
     }
 
 # Load API keys from a file
@@ -316,6 +323,80 @@ def generate_additional_elements(game_concept, elements_to_generate):
     
     return additional_elements
 
+# Create trailer function
+def create_trailer(images, music_url, game_concept):
+    try:
+        # Download music
+        music_response = requests.get(music_url)
+        music_response.raise_for_status()
+        music_file = BytesIO(music_response.content)
+        
+        # Create video clips from images
+        clips = []
+        for i, (img_name, img_url) in enumerate(images.items()):
+            img_response = requests.get(img_url)
+            img_response.raise_for_status()
+            img = Image.open(BytesIO(img_response.content))
+            img_array = np.array(img)
+            
+            # Generate caption
+            caption = generate_content(f"Create a short, catchy caption for this image in the context of the game: {game_concept}", "game marketing")
+            
+            # Create text clip
+            text_clip = mp.TextClip(caption, fontsize=30, color='white', bg_color='black', font='Arial')
+            text_clip = text_clip.set_pos('bottom').set_duration(2)
+            
+            # Create image clip
+            img_clip = mp.ImageClip(img_array).set_duration(2)
+            
+            # Combine image and text
+            combined_clip = mp.CompositeVideoClip([img_clip, text_clip])
+            clips.append(combined_clip)
+        
+        # Concatenate clips
+        final_clip = mp.concatenate_videoclips(clips)
+        
+        # Add music
+        audio = mp.AudioFileClip(music_file.name).subclip(0, final_clip.duration)
+        final_clip = final_clip.set_audio(audio)
+        
+        # Write video file
+        output_path = "game_trailer.mp4"
+        final_clip.write_videofile(output_path, fps=24)
+        
+        return output_path
+    except Exception as e:
+        st.error(f"Error creating trailer: {str(e)}")
+        return None
+
+# Compose MIDI function
+def compose_midi(game_concept):
+    try:
+        # Generate MIDI composition instructions
+        instructions = generate_content(f"Create detailed MIDI composition instructions for a song that fits the following game concept: {game_concept}. Include chord progression, melody, rhythm, and instrumentation details.", "music composition")
+        
+        # Use the code model to generate MIDI creation code
+        midi_code = generate_content(f"Create Python code using the midiutil library to compose a MIDI file based on these instructions: {instructions}", "music programming")
+        
+        # Execute the generated code
+        locals_dict = {'MIDIFile': MIDIFile}
+        exec(midi_code, globals(), locals_dict)
+        
+        # Assume the code creates a MIDIFile object named 'midi'
+        midi = locals_dict.get('midi')
+        if not midi:
+            raise ValueError("MIDI file was not created by the generated code.")
+        
+        # Save MIDI file
+        output_path = "game_theme.mid"
+        with open(output_path, "wb") as output_file:
+            midi.writeFile(output_file)
+        
+        return output_path
+    except Exception as e:
+        st.error(f"Error composing MIDI: {str(e)}")
+        return None
+
 # Generate a complete game plan
 def generate_game_plan(user_prompt, customization):
     game_plan = {}
@@ -367,6 +448,19 @@ def generate_game_plan(user_prompt, customization):
         update_status("Composing background music...", 0.9)
         music_prompt = f"Create background music for the game: {game_plan.get('game_concept', '')}. The music should reflect the game's atmosphere and enhance the player's experience."
         game_plan['music'] = generate_music(music_prompt)
+
+    # Experimental features
+    if customization['experimental']['create_trailer']:
+        update_status("Creating game trailer...", 0.95)
+        trailer_path = create_trailer(game_plan['images'], game_plan.get('music'), game_plan['game_concept'])
+        if trailer_path:
+            game_plan['trailer'] = trailer_path
+
+    if customization['experimental']['compose_midi']:
+        update_status("Composing MIDI theme...", 0.98)
+        midi_path = compose_midi(game_plan['game_concept'])
+        if midi_path:
+            game_plan['midi'] = midi_path
 
     update_status("Game plan generation complete!", 1.0)
 
@@ -425,6 +519,8 @@ def show_help_and_faq():
     - Scripts (for Unity, Unreal Engine, or Blender)
     - Additional elements like storyline, dialogue, game mechanics, and level design
     - Background music
+    - Game trailer (experimental)
+    - MIDI theme (experimental)
     """)
     
     st.markdown("### How can I use the generated content?")
@@ -440,6 +536,7 @@ def show_help_and_faq():
     - AI-generated content may require human review and refinement.
     - The app requires valid API keys for OpenAI and Replicate to function properly.
     - Large requests may take some time to process, depending on the selected options and server load.
+    - Experimental features (trailer and MIDI generation) may not always produce perfect results and might require manual adjustments.
     """)
 
 # Custom CSS for improved styling
@@ -488,11 +585,6 @@ with st.sidebar:
     st.session_state.customization['chat_model'] = st.selectbox(
         "Select Chat Model",
         options=['gpt-4', 'gpt-4o-mini', 'llama'],
-        index=0
-    )
-    st.session_state.customization['image_model'] = st.selectbox(
-        "Select Image Generation Model",
-        options=['dall-e-3', 'SD Flux-1', 'SDXL Lightning'],
         index=0
     )
     st.session_state.customization['code_model'] = st.selectbox(
@@ -566,6 +658,15 @@ with tab4:
     
     st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Background Music", value=st.session_state.customization['use_replicate']['generate_music'])
 
+    st.markdown('<p class="section-header">Experimental Features</p>', unsafe_allow_html=True)
+    st.markdown('<p class="info-text">Try out these experimental features to enhance your game plan.</p>', unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.session_state.customization['experimental']['create_trailer'] = st.checkbox("Create Trailer", value=st.session_state.customization['experimental']['create_trailer'])
+    with col2:
+        st.session_state.customization['experimental']['compose_midi'] = st.checkbox("Compose MIDI", value=st.session_state.customization['experimental']['compose_midi'])
+
 # Generate Game Plan
 if st.button("Generate Game Plan", key="generate_button"):
     if not st.session_state.api_keys['openai'] or not st.session_state.api_keys['replicate']:
@@ -621,6 +722,14 @@ if st.button("Generate Game Plan", key="generate_button"):
                 with st.expander(f"View {element_name.capitalize()}"):
                     st.write(element_content)
 
+        if 'trailer' in game_plan:
+            st.subheader("Game Trailer")
+            st.video(game_plan['trailer'])
+
+        if 'midi' in game_plan:
+            st.subheader("Game Theme (MIDI)")
+            st.audio(game_plan['midi'], format='audio/midi')
+
         # Save results
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
@@ -665,6 +774,14 @@ if st.button("Generate Game Plan", key="generate_button"):
                     zip_file.writestr("background_music.mp3", music_response.content)
                 except requests.RequestException as e:
                     st.error(f"Error downloading music: {str(e)}")
+
+            # Add trailer if generated
+            if 'trailer' in game_plan:
+                zip_file.write(game_plan['trailer'], "game_trailer.mp4")
+
+            # Add MIDI if generated
+            if 'midi' in game_plan:
+                zip_file.write(game_plan['midi'], "game_theme.mid")
 
         st.download_button(
             "Download Game Plan ZIP",
