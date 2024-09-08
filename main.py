@@ -4,12 +4,14 @@ import json
 import os
 import zipfile
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import replicate
 import base64
 import moviepy.editor as mp
 from midiutil import MIDIFile
 import numpy as np
+import tempfile
+
 
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
@@ -345,25 +347,29 @@ def create_trailer(images, music_url, game_concept):
                 img_response = requests.get(img_url)
                 img_response.raise_for_status()
                 img = Image.open(BytesIO(img_response.content))
-                img_array = np.array(img)
+                
+                # Resize image to 1080p if larger
+                if img.width > 1920 or img.height > 1080:
+                    img.thumbnail((1920, 1080), Image.LANCZOS)
                 
                 # Generate caption
                 caption = generate_content(f"Create a short, catchy caption for this {img_name} in the context of the game: {game_concept}", "game marketing")
                 
-                # Create text clip
-                text_clip = mp.TextClip(caption, fontsize=30, color='white', bg_color='rgba(0,0,0,0.5)', font='Arial', size=(img.width, None))
-                text_clip = text_clip.set_pos(('center', 'bottom')).set_duration(2)
+                # Create a new image with the caption
+                img_with_caption = Image.new('RGB', (img.width, img.height + 100), (0, 0, 0))
+                img_with_caption.paste(img, (0, 0))
                 
-                # Create image clip
-                img_clip = mp.ImageClip(img_array).set_duration(2)
+                # Add caption to the image
+                draw = ImageDraw.Draw(img_with_caption)
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 30)
+                draw.text((10, img.height + 10), caption, font=font, fill=(255, 255, 255))
                 
-                # Resize clip to 1080p if larger
-                if img_clip.w > 1920 or img_clip.h > 1080:
-                    img_clip = img_clip.resize(height=1080) if img_clip.w > img_clip.h else img_clip.resize(width=1920)
+                # Convert to numpy array
+                img_array = np.array(img_with_caption)
                 
-                # Combine image and text
-                combined_clip = mp.CompositeVideoClip([img_clip, text_clip])
-                clips.append(combined_clip)
+                # Create clip
+                clip = mp.ImageClip(img_array).set_duration(2)
+                clips.append(clip)
             except Exception as e:
                 st.warning(f"Error processing image {img_name}: {str(e)}")
                 continue
@@ -383,7 +389,9 @@ def create_trailer(images, music_url, game_concept):
         final_clip = final_clip.fade_in(0.5).fade_out(0.5)
         
         # Write video file
-        output_path = "game_trailer.mp4"
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_file:
+            output_path = temp_file.name
+        
         final_clip.write_videofile(output_path, fps=24, codec='libx264', audio_codec='aac')
         
         return output_path
@@ -393,6 +401,7 @@ def create_trailer(images, music_url, game_concept):
     except Exception as e:
         st.error(f"Error creating trailer: {str(e)}")
         return None
+        
 # Compose MIDI function
 def compose_midi(game_concept):
     try:
