@@ -103,7 +103,6 @@ def generate_content(prompt, role):
         return "Error: Invalid chat model selected."
 
 # Generate images using selected image model
-# Generate images using selected image model
 def generate_image(prompt, size):
     if st.session_state.customization['image_model'] == 'dall-e-3':
         data = {
@@ -130,33 +129,22 @@ def generate_image(prompt, size):
         except requests.RequestException as e:
             return f"Error: Unable to generate image: {str(e)}"
     elif st.session_state.customization['image_model'] == 'SD Flux-1':
-        replicate_client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
-        
         try:
-            output = replicate_client.run(
+            output = replicate.run(
                 "black-forest-labs/flux-pro",
-                input={
-                    "prompt": prompt,
-                    # Add any additional parameters required by the Flux-1 model
-                    # For example:
-                    # "width": size[0],
-                    # "height": size[1],
-                    # You may need to adjust these based on the model's schema
-                }
+                input={"prompt": prompt}
             )
-            return output[0] if output else None
+            return output
         except Exception as e:
-            return f"Error: Unable to generate image: {str(e)}"
+            return f"Error: Unable to generate image using SD Flux-1: {str(e)}"
     else:
         return "Error: Invalid image model selected."
 
 # Convert image to 3D model using Replicate API
 def convert_image_to_3d(image_url):
-    replicate_client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
-    
     try:
-        prediction = replicate_client.predictions.create(
-            version="d2870893aa115773465a823fe70fd446673604189843f39a99642dd9171e05e2",
+        output = replicate.run(
+            "camenduru/lgm:d2870893aa115773465a823fe70fd446673604189843f39a99642dd9171e05e2",
             input={
                 "input_image": image_url,
                 "prompt": "a 3D model",
@@ -165,16 +153,8 @@ def convert_image_to_3d(image_url):
             }
         )
         
-        prediction = replicate_client.predictions.wait(prediction.id)
-        
-        if prediction.status != "succeeded":
-            st.error(f"3D conversion failed: {prediction.error}")
-            return None
-        
-        output_urls = prediction.output
-        
         result = {'glb': None, 'obj': None}
-        for url in output_urls:
+        for url in output:
             if url.endswith('.glb'):
                 result['glb'] = url
             elif url.endswith('.obj'):
@@ -187,10 +167,8 @@ def convert_image_to_3d(image_url):
 
 # Generate music using Replicate's MusicGen
 def generate_music(prompt):
-    replicate_client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
-    
     try:
-        output = replicate_client.run(
+        output = replicate.run(
             "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
             input={
                 "prompt": prompt,
@@ -347,7 +325,17 @@ def generate_game_plan(user_prompt, customization):
 
 # Function to display images
 def display_image(image_url, caption):
-    st.image(image_url, caption=caption, use_column_width=True)
+    try:
+        response = requests.get(image_url)
+        response.raise_for_status()  # Raise an exception for bad responses
+        image = Image.open(BytesIO(response.content))
+        st.image(image, caption=caption, use_column_width=True)
+    except requests.RequestException as e:
+        st.warning(f"Unable to load image: {caption}")
+        st.error(f"Error: {str(e)}")
+    except Exception as e:
+        st.warning(f"Unable to display image: {caption}")
+        st.error(f"Error: {str(e)}")
 
 # Custom CSS for improved styling
 st.markdown("""
@@ -426,7 +414,7 @@ with tab2:
         with col2:
             if img_type in ['Character', 'Enemy', 'Object', 'UI']:
                 st.session_state.customization['convert_to_3d'][img_type] = st.checkbox(
-                    "Make 3D (feature not working)",
+                    "Make 3D",
                     value=st.session_state.customization['convert_to_3d'][img_type],
                     key=f"3d_checkbox_{img_type}"
                 )
@@ -560,6 +548,19 @@ if st.button("Generate Game Plan", key="generate_button"):
                 music_response = requests.get(game_plan['music'])
                 zip_file.writestr("background_music.mp3", music_response.content)
 
+        st.download_button(
+            "Download Game Plan ZIP",
+            zip_buffer.getvalue(),
+            file_name="game_plan.zip",
+            mime="application/zip",
+            help="Download a ZIP file containing all generated assets and documents."
+        )
+
+        # Display generated music if applicable
+        if 'music' in game_plan:
+            st.subheader("Generated Music")
+            st.audio(game_plan['music'], format='audio/mp3')
+
 # Footer
 st.markdown("---")
 st.markdown("""
@@ -569,3 +570,17 @@ st.markdown("""
     [Instagram](https://instagram.com/rhythrosalabs) | 
     [Facebook](https://facebook.com/rhythrosalabs)
     """, unsafe_allow_html=True)
+
+# Initialize Replicate client
+if st.session_state.api_keys['replicate']:
+    replicate.Client(api_token=st.session_state.api_keys['replicate'])
+
+# Main execution
+if __name__ == "__main__":
+    # Load API keys
+    openai_key, replicate_key = load_api_keys()
+    if openai_key and replicate_key:
+        st.session_state.api_keys['openai'] = openai_key
+        st.session_state.api_keys['replicate'] = replicate_key
+    
+    # The rest of the app is defined by the Streamlit layout above
