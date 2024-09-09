@@ -313,6 +313,30 @@ def generate_additional_elements(game_concept, elements_to_generate):
 
 # Generate GameSetup.cs
 def generate_game_setup(game_plan):
+    setup_script = generate_initial_setup_script(game_plan)
+    
+    # AI check to verify and correct the code
+    prompt = f"Verify and correct the following Unity C# script for a GameSetup.cs file. Ensure it's runnable and follows best practices:\n\n{setup_script}"
+    
+    response = openai.Completion.create(
+        engine="text-davinci-002",
+        prompt=prompt,
+        max_tokens=1500,
+        n=1,
+        stop=None,
+        temperature=0.5,
+    )
+    
+    corrected_script = response.choices[0].text.strip()
+    
+    # Save the corrected script to a file in the same directory
+    with open("GameSetup.cs", "w") as file:
+        file.write(corrected_script)
+    
+    return corrected_script
+
+def generate_initial_setup_script(game_plan):
+    # This function remains largely the same as your original code
     setup_script = """
 using UnityEngine;
 using UnityEditor;
@@ -338,13 +362,12 @@ public class GameSetup : EditorWindow
 
     private static void CreateFolders()
     {
-        string[] folders = { "Assets/Scripts", "Assets/Prefabs", "Assets/Scenes", "Assets/Images" };
+        string[] folders = { "Scripts", "Prefabs", "Scenes", "Images" };
         foreach (string folder in folders)
         {
-            if (!AssetDatabase.IsValidFolder(folder))
+            if (!AssetDatabase.IsValidFolder($"Assets/{folder}"))
             {
-                AssetDatabase.CreateFolder(folder.Substring(0, folder.LastIndexOf('/')), 
-                                           folder.Substring(folder.LastIndexOf('/') + 1));
+                AssetDatabase.CreateFolder("Assets", folder);
             }
         }
     }
@@ -354,20 +377,13 @@ public class GameSetup : EditorWindow
 """
     # Add generated scripts
     for script_name, script_content in game_plan.get('scripts', {}).items():
-        script_name = script_name.replace('.py', '.cs')  # Ensure C# file extension
         setup_script += f"""
-        string {script_name.split('.')[0]}Path = "Assets/Scripts/{script_name}";
+        string {script_name.split('.')[0]}Path = $"Assets/Scripts/{script_name}";
         if (!File.Exists({script_name.split('.')[0]}Path))
         {{
             using (StreamWriter outfile = new StreamWriter({script_name.split('.')[0]}Path))
             {{
-                outfile.WriteLine(@"
-using UnityEngine;
-
-public class {script_name.split('.')[0]} : MonoBehaviour
-{{
-    {script_content}
-}}");
+                outfile.WriteLine(@"{script_content}");
             }}
         }}
 """
@@ -383,7 +399,7 @@ public class {script_name.split('.')[0]} : MonoBehaviour
             setup_script += f"""
         GameObject {img_name.split('_')[0]}Prefab = new GameObject("{img_name.split('_')[0]}");
         SpriteRenderer {img_name.split('_')[0]}Sprite = {img_name.split('_')[0]}Prefab.AddComponent<SpriteRenderer>();
-        {img_name.split('_')[0]}Sprite.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Images/{img_name}.png");
+        {img_name.split('_')[0]}Sprite.sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/Images/{img_name}.png");
         
         // Add corresponding script component if it exists
         System.Type scriptType = System.Type.GetType("{img_name.split('_')[0]}");
@@ -392,7 +408,7 @@ public class {script_name.split('.')[0]} : MonoBehaviour
             {img_name.split('_')[0]}Prefab.AddComponent(scriptType);
         }}
         
-        PrefabUtility.SaveAsPrefabAsset({img_name.split('_')[0]}Prefab, "Assets/Prefabs/{img_name.split('_')[0]}.prefab");
+        PrefabUtility.SaveAsPrefabAsset({img_name.split('_')[0]}Prefab, $"Assets/Prefabs/{img_name.split('_')[0]}.prefab");
         GameObject.DestroyImmediate({img_name.split('_')[0]}Prefab);
 """
     setup_script += """
@@ -406,7 +422,7 @@ public class {script_name.split('.')[0]} : MonoBehaviour
     for img_name, img_url in game_plan.get('images', {}).items():
         if isinstance(img_url, str) and img_url.startswith('http'):
             setup_script += f"""
-        GameObject {img_name.split('_')[0]} = PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/{img_name.split('_')[0]}.prefab")) as GameObject;
+        GameObject {img_name.split('_')[0]} = PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Prefabs/{img_name.split('_')[0]}.prefab")) as GameObject;
         {img_name.split('_')[0]}.transform.position = new Vector3(0, 0, 0);
 """
     setup_script += """
@@ -431,6 +447,10 @@ public class {script_name.split('.')[0]} : MonoBehaviour
 }
 """
     return setup_script
+
+# Usage
+game_plan = generate_game_plan(user_prompt, st.session_state.customization)
+game_setup_script = generate_game_setup(game_plan)
 
 # Generate a complete game plan
 def generate_game_plan(user_prompt, customization):
