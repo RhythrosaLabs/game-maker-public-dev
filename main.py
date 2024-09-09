@@ -5,7 +5,7 @@ import os
 import zipfile
 import shutil
 import tempfile
-from io import BytesIO, StringIO
+from io import BytesIO
 from PIL import Image
 import replicate
 import base64
@@ -20,7 +20,6 @@ API_KEY_FILE = "api_key.json"
 if 'api_keys' not in st.session_state:
     st.session_state.api_keys = {'openai': None, 'replicate': None}
 
-# Initialize session state
 if 'customization' not in st.session_state:
     st.session_state.customization = {
         'image_types': ['Character', 'Enemy', 'Background', 'Object', 'Texture', 'Sprite', 'UI'],
@@ -49,7 +48,6 @@ if 'customization' not in st.session_state:
             'items': False
         }
     }
-
 
 # Load API keys from a file
 def load_api_keys():
@@ -174,7 +172,8 @@ def generate_image(prompt, size):
 # Convert image to 3D model using Replicate API
 def convert_image_to_3d(image_url):
     try:
-        output = replicate.run(
+        client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+        output = client.run(
             "camenduru/lgm:d2870893aa115773465a823fe70fd446673604189843f39a99642dd9171e05e2",
             input={
                 "input_image": image_url,
@@ -252,7 +251,7 @@ def generate_images(customization, game_concept):
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
                 if customization['convert_to_3d'].get(img_type, False):
                     model_url = convert_image_to_3d(image_url)
-                    if model_url and not model_url.startswith('Error'):
+                    if model_url and not isinstance(model_url, str) and not model_url.startswith('Error'):
                         images[f"{img_type.lower()}_3d_model_{i + 1}"] = model_url
             else:
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
@@ -315,10 +314,10 @@ def generate_scripts(customization, game_concept):
 
             # Generate content using OpenAI or Replicate depending on code model
             if customization['code_model'] in ['gpt-4o', 'gpt-4o-mini']:
-                script_code = generate_full_script(desc)  # generate full code
+                script_code = generate_content(desc, "code generation")  # Use generate_content for OpenAI models
             else:
                 # If using Replicate (CodeLlama), adapt accordingly
-                script_code = replicate_code_generation(desc)
+                script_code = generate_content(desc, "code generation")  # For now, use the same function
 
             # Handle truncation if needed
             full_script = handle_truncated_response(script_code, desc)
@@ -330,9 +329,9 @@ def generate_scripts(customization, game_concept):
 
 def handle_truncated_response(response, prompt):
     full_response = response
-    while is_incomplete(full_response):  # Define how to check if the response is incomplete
-        continuation_prompt = f"Continue from: {full_response[-200:]}"  # Send last part of the code
-        continuation = generate_content(continuation_prompt, "code")  # API call for continuation
+    while len(full_response) < 100 or full_response.endswith('...'):  # Simple check for truncation
+        continuation_prompt = f"Continue the following code: {full_response[-200:]}"
+        continuation = generate_content(continuation_prompt, "code generation")
         full_response += continuation
     return full_response
 
@@ -340,7 +339,6 @@ def save_script_to_file(script_name, script_content, output_dir):
     script_path = os.path.join(output_dir, f"{script_name}.py")
     with open(script_path, 'w') as script_file:
         script_file.write(script_content)
-
 
 # Generate additional game elements
 def generate_additional_elements(game_concept, elements_to_generate):
@@ -456,6 +454,9 @@ def display_image(image_url, caption):
         st.warning(f"Unable to display image: {caption}")
         st.error(f"Error: {str(e)}")
 
+Certainly. Here's the final part of the updated code, including the Streamlit app layout and main execution:
+
+```python
 # Help and FAQ function
 def show_help_and_faq():
     st.markdown("## Help & FAQ")
@@ -637,7 +638,6 @@ with tab4:
     
     st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Background Music", value=st.session_state.customization['use_replicate']['generate_music'])
 
-# Later in the code, when setting up the Procedural Generation tab:
 with tab5:
     st.markdown('<p class="section-header">Procedural Generation</p>', unsafe_allow_html=True)
     st.markdown('<p class="info-text">Select elements to be procedurally generated:</p>', unsafe_allow_html=True)
@@ -657,6 +657,7 @@ with tab5:
             "Procedural Item Generation", 
             value=st.session_state.customization['procedural_generation']['items']
         )
+
 # Generate Game Plan
 if st.button("Generate Game Plan", key="generate_button"):
     if not st.session_state.api_keys['openai'] or not st.session_state.api_keys['replicate']:
@@ -727,147 +728,30 @@ if st.button("Generate Game Plan", key="generate_button"):
             with st.expander("View Procedural Item Generation Script"):
                 st.code(game_plan['procedural_items'], language='python')
 
-        # Create a standardized directory structure
-        def create_directory_structure(base_path):
-            directory_structure = {
-                "Assets": {
-                    "Images": {
-                        "Characters": {},
-                        "Enemies": {},
-                        "Backgrounds": {},
-                        "Objects": {},
-                        "Textures": {},
-                        "Sprites": {},
-                        "UI": {}
-                    },
-                    "Models": {
-                        "Characters": {},
-                        "Enemies": {},
-                        "Objects": {}
-                    },
-                    "Audio": {
-                        "Music": {},
-                        "SFX": {}
-                    },
-                    "Scripts": {
-                        "Procedural": {}
-                    }
-                },
-                "Docs": {},
-                "SetupScripts": {}
-            }
-
-            def create_recursive(current_path, structure):
-                for key, value in structure.items():
-                    new_path = os.path.join(current_path, key)
-                    os.makedirs(new_path, exist_ok=True)
-                    if isinstance(value, dict):
-                        create_recursive(new_path, value)
-
-            create_recursive(base_path, directory_structure)
-
-        # Create a temporary directory for the export
+        # Create a ZIP file with all generated content
         with tempfile.TemporaryDirectory() as temp_dir:
-            create_directory_structure(temp_dir)
+            # Save all generated content to files in the temporary directory
+            for key, value in game_plan.items():
+                if isinstance(value, str):
+                    with open(os.path.join(temp_dir, f"{key}.txt"), 'w') as f:
+                        f.write(value)
+                elif isinstance(value, dict):
+                    for sub_key, sub_value in value.items():
+                        if isinstance(sub_value, str):
+                            with open(os.path.join(temp_dir, f"{key}_{sub_key}.txt"), 'w') as f:
+                                f.write(sub_value)
 
-            # Export images
-            for img_type, img_url in game_plan['images'].items():
-                if isinstance(img_url, str) and img_url.startswith('http'):
-                    img_response = requests.get(img_url)
-                    img_path = os.path.join(temp_dir, 'Assets', 'Images', img_type.capitalize(), f"{img_type}.png")
-                    os.makedirs(os.path.dirname(img_path), exist_ok=True)
-                    with open(img_path, 'wb') as img_file:
-                        img_file.write(img_response.content)
+            # Create a ZIP file
+            shutil.make_archive(os.path.join(temp_dir, "game_plan"), 'zip', temp_dir)
 
-            # Export 3D models
-            for model_type, model_url in game_plan.get('3d_models', {}).items():
-                if isinstance(model_url, dict):
-                    for format, url in model_url.items():
-                        if url and url.startswith('http'):
-                            model_response = requests.get(url)
-                            model_path = os.path.join(temp_dir, 'Assets', 'Models', model_type.capitalize(), f"{model_type}.{format}")
-                            os.makedirs(os.path.dirname(model_path), exist_ok=True)
-                            with open(model_path, 'wb') as model_file:
-                                model_file.write(model_response.content)
-
-            # Export scripts
-            for script_name, script_content in game_plan['scripts'].items():
-                script_path = os.path.join(temp_dir, 'Assets', 'Scripts', script_name)
-                os.makedirs(os.path.dirname(script_path), exist_ok=True)
-                with open(script_path, 'w') as script_file:
-                    script_file.write(script_content)
-
-            # Export procedural generation scripts
-            for proc_type in ['procedural_world', 'procedural_levels', 'procedural_items']:
-                if proc_type in game_plan:
-                    proc_path = os.path.join(temp_dir, 'Assets', 'Scripts', 'Procedural', f"{proc_type}.py")
-                    os.makedirs(os.path.dirname(proc_path), exist_ok=True)
-                    with open(proc_path, 'w') as proc_file:
-                        proc_file.write(game_plan[proc_type])
-
-            # Export music
-            if 'music' in game_plan:
-                music_response = requests.get(game_plan['music'])
-                music_path = os.path.join(temp_dir, 'Assets', 'Audio', 'Music', 'background_music.mp3')
-                os.makedirs(os.path.dirname(music_path), exist_ok=True)
-                with open(music_path, 'wb') as music_file:
-                    music_file.write(music_response.content)
-
-            # Export documentation
-            for doc_name in ['game_concept', 'world_concept', 'character_concepts', 'plot']:
-                if doc_name in game_plan:
-                    doc_path = os.path.join(temp_dir, 'Docs', f"{doc_name}.txt")
-                    os.makedirs(os.path.dirname(doc_path), exist_ok=True)
-                    with open(doc_path, 'w') as doc_file:
-                        doc_file.write(game_plan[doc_name])
-
-            # Export additional elements
-            for element_name, element_content in game_plan.get('additional_elements', {}).items():
-                element_path = os.path.join(temp_dir, 'Docs', f"{element_name}.txt")
-                os.makedirs(os.path.dirname(element_path), exist_ok=True)
-                with open(element_path, 'w') as element_file:
-                    element_file.write(element_content)
-
-            # Create a game_plan.json file with all the information
-            game_plan_path = os.path.join(temp_dir, 'game_plan.json')
-            os.makedirs(os.path.dirname(game_plan_path), exist_ok=True)
-            with open(game_plan_path, 'w') as game_plan_file:
-                json.dump(game_plan, game_plan_file, indent=2)
-
-            # Generate and export setup scripts
-            unity_setup_script = generate_unity_setup_script(game_plan)
-            unity_setup_path = os.path.join(temp_dir, 'SetupScripts', 'UnitySetup.cs')
-            os.makedirs(os.path.dirname(unity_setup_path), exist_ok=True)
-            with open(unity_setup_path, 'w') as unity_setup_file:
-                unity_setup_file.write(unity_setup_script)
-
-            unreal_setup_script = generate_unreal_setup_script(game_plan)
-            unreal_setup_path = os.path.join(temp_dir, 'SetupScripts', 'UnrealSetup.py')
-            os.makedirs(os.path.dirname(unreal_setup_path), exist_ok=True)
-            with open(unreal_setup_path, 'w') as unreal_setup_file:
-                unreal_setup_file.write(unreal_setup_script)
-
-            # Create a ZIP file from the temporary directory
-            shutil.make_archive("game_plan", 'zip', temp_dir)
-
-        # Provide download button for the ZIP file
-        with open("game_plan.zip", "rb") as f:
-            st.download_button(
-                label="Download Game Plan ZIP",
-                data=f,
-                file_name="game_plan.zip",
-                mime="application/zip"
-            )
-
-
-        # Provide download button for the ZIP file
-        with open("game_plan.zip", "rb") as f:
-            st.download_button(
-                label="Download Game Plan ZIP",
-                data=f,
-                file_name="game_plan.zip",
-                mime="application/zip"
-            )
+            # Provide download button for the ZIP file
+            with open(os.path.join(temp_dir, "game_plan.zip"), "rb") as f:
+                st.download_button(
+                    label="Download Game Plan ZIP",
+                    data=f,
+                    file_name="game_plan.zip",
+                    mime="application/zip"
+                )
 
         # Display generated music if applicable
         if 'music' in game_plan and game_plan['music']:
@@ -884,203 +768,6 @@ st.markdown("""
     [Twitter](https://twitter.com/yourusername) | 
     [Website](https://www.yourwebsite.com)
     """, unsafe_allow_html=True)
-
-# Helper functions for setup scripts
-def generate_unity_setup_script(game_plan):
-    return """
-using UnityEngine;
-using UnityEditor;
-using System.IO;
-using System.Collections.Generic;
-
-public class GameSetup : EditorWindow
-{
-    [MenuItem("Game Setup/Setup Project")]
-    public static void SetupProject()
-    {
-        CreateFolders();
-        ImportAssets();
-        SetupScenes();
-        CreatePrefabs();
-        SetupProceduralGeneration();
-        Debug.Log("Game setup completed successfully!");
-    }
-
-    private static void CreateFolders()
-    {
-        string[] folders = {
-            "Assets/Scripts", "Assets/Prefabs", "Assets/Materials",
-            "Assets/Textures", "Assets/Models", "Assets/Scenes",
-            "Assets/Audio/Music", "Assets/Audio/SFX"
-        };
-
-        foreach (string folder in folders)
-        {
-            if (!AssetDatabase.IsValidFolder(folder))
-            {
-                AssetDatabase.CreateFolder(folder.Substring(0, folder.LastIndexOf('/')), 
-                                           folder.Substring(folder.LastIndexOf('/') + 1));
-            }
-        }
-    }
-
-    private static void ImportAssets()
-    {
-        // Import textures
-        string[] textureFiles = Directory.GetFiles("Assets/Textures", "*.png", SearchOption.AllDirectories);
-        foreach (string file in textureFiles)
-        {
-            AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-        }
-
-        // Import models
-        string[] modelFiles = Directory.GetFiles("Assets/Models", "*.fbx", SearchOption.AllDirectories);
-        foreach (string file in modelFiles)
-        {
-            AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-        }
-
-        // Import audio
-        string[] audioFiles = Directory.GetFiles("Assets/Audio", "*.mp3", SearchOption.AllDirectories);
-        foreach (string file in audioFiles)
-        {
-            AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-        }
-
-        AssetDatabase.Refresh();
-    }
-
-    private static void SetupScenes()
-    {
-        // Create a new scene
-        EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
-        
-        // Add a plane as a floor
-        GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
-        floor.transform.localScale = new Vector3(10, 1, 10);
-        
-        // Add a directional light
-        GameObject light = new GameObject("Directional Light");
-        Light lightComp = light.AddComponent<Light>();
-        lightComp.type = LightType.Directional;
-        light.transform.rotation = Quaternion.Euler(50, -30, 0);
-        
-        // Save the scene
-        EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/MainScene.unity");
-    }
-
-    private static void CreatePrefabs()
-    {
-        // Create a basic player prefab
-        GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        player.AddComponent<Rigidbody>();
-        player.AddComponent<CapsuleCollider>();
-        PrefabUtility.SaveAsPrefabAsset(player, "Assets/Prefabs/Player.prefab");
-        GameObject.DestroyImmediate(player);
-    }
-
-    private static void SetupProceduralGeneration()
-    {
-        // Create a new script for procedural generation
-        string scriptContent = @"
-using UnityEngine;
-
-public class ProceduralGeneration : MonoBehaviour
-{
-    public int seed = 0;
-
-    void Start()
-    {
-        GenerateLevel();
-    }
-
-    void GenerateLevel()
-    {
-        // Implement your procedural generation logic here
-        Debug.Log(""Generating level with seed: "" + seed);
-    }
-}
-";
-        File.WriteAllText("Assets/Scripts/ProceduralGeneration.cs", scriptContent);
-        AssetDatabase.Refresh();
-    }
-}
-"""
-
-def generate_unreal_setup_script(game_plan):
-    return """
-import unreal
-
-def setup_project():
-    create_folders()
-    import_assets()
-    setup_levels()
-    create_blueprints()
-    setup_procedural_generation()
-    unreal.log("Game setup completed successfully!")
-
-def create_folders():
-    folders = [
-        "/Game/Scripts", "/Game/Blueprints", "/Game/Materials",
-        "/Game/Textures", "/Game/Models", "/Game/Levels",
-        "/Game/Audio/Music", "/Game/Audio/SFX"
-    ]
-    for folder in folders:
-        unreal.EditorAssetLibrary.make_directory(folder)
-
-def import_assets():
-    # Import textures
-    texture_files = unreal.EditorAssetLibrary.list_assets("/Game/Textures")
-    for texture_file in texture_files:
-        unreal.EditorAssetLibrary.import_asset(texture_file)
-
-    # Import models
-    model_files = unreal.EditorAssetLibrary.list_assets("/Game/Models")
-    for model_file in model_files:
-        unreal.EditorAssetLibrary.import_asset(model_file)
-
-    # Import audio
-    audio_files = unreal.EditorAssetLibrary.list_assets("/Game/Audio")
-    for audio_file in audio_files:
-        unreal.EditorAssetLibrary.import_asset(audio_file)
-
-def setup_levels():
-    # Create and set up your game levels
-    level_factory = unreal.LevelFactory()
-    level_path = "/Game/Levels/MainLevel"
-    new_level = unreal.AssetToolsHelpers.get_asset_tools().create_asset("MainLevel", "/Game/Levels", unreal.World, level_factory)
-    
-    # Add a player start to the level
-    player_start = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.PlayerStart, unreal.Vector(0, 0, 0), unreal.Rotator(0, 0, 0))
-    
-    # Add some basic geometry to the level
-    floor = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector(0, 0, 0), unreal.Rotator(0, 0, 0))
-    floor.static_mesh_component.set_static_mesh(unreal.EditorAssetLibrary.load_asset("/Engine/BasicShapes/Plane"))
-    floor.set_actor_scale3d(unreal.Vector(10, 10, 1))
-
-def create_blueprints():
-    # Create a basic character blueprint
-    character_factory = unreal.BlueprintFactory()
-    character_bp = unreal.AssetToolsHelpers.get_asset_tools().create_asset("BP_PlayerCharacter", "/Game/Blueprints", unreal.Blueprint, character_factory)
-    
-    # Add components to the character blueprint
-    unreal.GameplayStatics.get_player_character(0).add_component(unreal.CapsuleComponent)
-    unreal.GameplayStatics.get_player_character(0).add_component(unreal.SkeletalMeshComponent)
-    unreal.GameplayStatics.get_player_character(0).add_component(unreal.CharacterMovementComponent)
-
-def setup_procedural_generation():
-    # Create a blueprint for procedural generation
-    proc_gen_factory = unreal.BlueprintFactory()
-    proc_gen_bp = unreal.AssetToolsHelpers.get_asset_tools().create_asset("BP_ProceduralGeneration", "/Game/Blueprints", unreal.Blueprint, proc_gen_factory)
-    
-    # Add some basic variables and functions to the blueprint
-    # (Note: This is a simplified example and would need to be expanded for actual use)
-    unreal.BlueprintEditorLibrary.add_member_variable(proc_gen_bp, "SeedValue", unreal.EdGraphPinType("int"))
-    unreal.BlueprintEditorLibrary.add_function(proc_gen_bp, "GenerateLevel")
-
-if __name__ == "__main__":
-    setup_project()
-"""
 
 # Initialize Replicate client
 if st.session_state.api_keys['replicate']:
