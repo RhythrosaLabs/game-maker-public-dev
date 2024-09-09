@@ -404,7 +404,6 @@ public class GameManager : MonoBehaviour
 """
     return setup_script
 
-    
 def generate_script_creation(game_plan):
     script_creation = ""
     for script_name, script_content in game_plan.get('scripts', {}).items():
@@ -422,7 +421,6 @@ def validate_script(script_code, role="Unity C# code validation"):
     
     return validated_code
 
-
 # Generate GameSetup.cs and validate it
 def generate_and_validate_game_setup(game_plan):
     # Generate the initial GameSetup.cs script
@@ -438,7 +436,6 @@ def generate_and_validate_game_setup(game_plan):
     # Optionally, you can overwrite the generated script with the validated one
     return validated_script
 
-
 def generate_prefab_creation(game_plan):
     prefab_creation = ""
     for img_name, img_url in game_plan.get('images', {}).items():
@@ -450,7 +447,6 @@ def generate_prefab_creation(game_plan):
         GameObject.DestroyImmediate({img_name}Prefab);
 """
     return prefab_creation
-
 
 def generate_scene_setup(game_plan):
     scene_setup = ""
@@ -762,9 +758,7 @@ if st.button("Generate Game Plan", key="generate_button"):
             validated_script = validate_script(game_setup_script)
             st.subheader("Generated GameSetup.cs")
             st.code(validated_script, language='csharp')
-        
-            # Save the validated GameSetup.cs script into the ZIP file
-            zip_file.writestr("GameSetup.cs", validated_script)
+
         if 'additional_elements' in game_plan:
             st.subheader("Additional Game Elements")
             for element_name, element_content in game_plan['additional_elements'].items():
@@ -817,7 +811,7 @@ if st.button("Generate Game Plan", key="generate_button"):
                     st.error(f"Error downloading music: {str(e)}")
 
             # Add GameSetup.cs
-            zip_file.writestr("GameSetup.cs", game_setup_script)
+            zip_file.writestr("GameSetup.cs", validated_script)
 
         st.download_button(
             "Download Game Plan ZIP",
