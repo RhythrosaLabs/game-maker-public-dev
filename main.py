@@ -278,15 +278,6 @@ def clean_generated_code(raw_code):
 
     return code.strip()
 
-# Handle truncated responses and ensure full script generation
-def handle_truncated_response(response, prompt):
-    full_script = clean_generated_code(response)
-    while len(full_script) < 100 or full_script.endswith('...'):  # Check for truncation or incomplete code
-        continuation_prompt = f"Continue the following code: {full_script[-200:]}"
-        continuation = generate_content(continuation_prompt, "code generation")
-        full_script += clean_generated_code(continuation)
-    return full_script
-
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
     scripts = {}
