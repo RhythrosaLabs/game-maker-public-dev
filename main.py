@@ -259,10 +259,10 @@ def generate_images(customization, game_concept):
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
     script_descriptions = {
-        'Player': f"Create a comprehensive player character script for a 2D game. The character should have WASD movement, jumping with spacebar, and an action button (e.g., attack or interact). Implement smooth movement, basic physics (gravity and collision), and state management (idle, walking, jumping, attacking). The player should fit the following game concept: {game_concept}. Include comments explaining each major component and potential areas for expansion.",
-        'Enemy': f"Develop a detailed enemy AI script for a 2D game. The enemy should have basic pathfinding, player detection, and attack mechanics. Implement different states (idle, patrolling, chasing, attacking) and ensure smooth transitions between them. The enemy behavior should fit the following game concept: {game_concept}. Include comments explaining the AI logic and suggestions for scaling difficulty.",
-        'Game Object': f"Script a versatile game object that can be used for various purposes in a 2D game. This could be a collectible item, a trap, or an interactive element. Implement functionality for player interaction, animation states, and any special effects. The object should fit the following game concept: {game_concept}. Include comments on how to easily modify the script for different object types.",
-        'Level Background': f"Create a script to manage the level background in a 2D game. This should handle parallax scrolling with multiple layers, potential day/night cycles, and any interactive background elements. The background should fit the following game concept: {game_concept}. Include optimization tips and comments on how to extend the script for more complex backgrounds."
+        'Player': f"Create a comprehensive player character script for a Unity 2D game. The character should have WASD movement, jumping with spacebar, and an action button (e.g., attack or interact). Implement smooth movement, basic physics (gravity and collision), and state management (idle, walking, jumping, attacking). The player should fit the following game concept: {game_concept}. Include comments explaining each major component and potential areas for expansion.",
+        'Enemy': f"Develop a detailed enemy AI script for a Unity 2D game. The enemy should have basic pathfinding, player detection, and attack mechanics. Implement different states (idle, patrolling, chasing, attacking) and ensure smooth transitions between them. The enemy behavior should fit the following game concept: {game_concept}. Include comments explaining the AI logic and suggestions for scaling difficulty.",
+        'Game Object': f"Script a versatile game object that can be used for various purposes in a Unity 2D game. This could be a collectible item, a trap, or an interactive element. Implement functionality for player interaction, animation states, and any special effects. The object should fit the following game concept: {game_concept}. Include comments on how to easily modify the script for different object types.",
+        'Level Background': f"Create a script to manage the level background in a Unity 2D game. This should handle parallax scrolling with multiple layers, potential day/night cycles, and any interactive background elements. The background should fit the following game concept: {game_concept}. Include optimization tips and comments on how to extend the script for more complex backgrounds."
     }
     
     scripts = {}
@@ -271,17 +271,15 @@ def generate_scripts(customization, game_concept):
             desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
             
             if customization['code_model'] in ['gpt-4o', 'gpt-4o-mini']:
-                # Use OpenAI API for GPT-4 models
-                script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
+                script_code = generate_content(f"Create a comprehensive Unity C# script for {desc}. Include detailed comments, error handling, and optimize for performance.", "Unity game development")
             elif customization['code_model'] == 'CodeLlama-34B':
-                # Use Replicate API for CodeLlama
                 try:
                     client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
                     output = client.run(
                         "andreasjansson/codellama-34b-instruct-gguf:97a1fb465d5cdf2854c89ebeaee3ceb353206b8187b665a83bcf6efd21e534ab",
                         input={
-                            "prompt": f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.",
-                            "grammar": "root        ::= \"```python\\n\" code \"```\"\ncode        ::= [^`]+",
+                            "prompt": f"Create a comprehensive Unity C# script for {desc}. Include detailed comments, error handling, and optimize for performance.",
+                            "grammar": "root        ::= \"```csharp\\n\" code \"```\"\ncode        ::= [^`]+",
                             "jsonschema": ""
                         }
                     )
@@ -291,7 +289,7 @@ def generate_scripts(customization, game_concept):
             else:
                 script_code = "Error: Invalid code model selected."
 
-            scripts[f"{script_type.lower()}_script_{i + 1}.py"] = script_code
+            scripts[f"{script_type.lower()}_script_{i + 1}.cs"] = script_code
 
     return scripts
 
@@ -354,27 +352,31 @@ public class GameSetup : EditorWindow
     private static void CreateScripts()
     {
 """
-
     # Add generated scripts
     for script_name, script_content in game_plan.get('scripts', {}).items():
+        script_name = script_name.replace('.py', '.cs')  # Ensure C# file extension
         setup_script += f"""
         string {script_name.split('.')[0]}Path = "Assets/Scripts/{script_name}";
         if (!File.Exists({script_name.split('.')[0]}Path))
         {{
             using (StreamWriter outfile = new StreamWriter({script_name.split('.')[0]}Path))
             {{
-                outfile.WriteLine(@"{script_content}");
+                outfile.WriteLine(@"
+using UnityEngine;
+
+public class {script_name.split('.')[0]} : MonoBehaviour
+{{
+    {script_content}
+}}");
             }}
         }}
 """
-
     setup_script += """
     }
 
     private static void CreatePrefabs()
     {
 """
-
     # Add generated prefabs
     for img_name, img_url in game_plan.get('images', {}).items():
         if isinstance(img_url, str) and img_url.startswith('http'):
@@ -382,10 +384,17 @@ public class GameSetup : EditorWindow
         GameObject {img_name.split('_')[0]}Prefab = new GameObject("{img_name.split('_')[0]}");
         SpriteRenderer {img_name.split('_')[0]}Sprite = {img_name.split('_')[0]}Prefab.AddComponent<SpriteRenderer>();
         {img_name.split('_')[0]}Sprite.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Images/{img_name}.png");
+        
+        // Add corresponding script component if it exists
+        System.Type scriptType = System.Type.GetType("{img_name.split('_')[0]}");
+        if (scriptType != null)
+        {{
+            {img_name.split('_')[0]}Prefab.AddComponent(scriptType);
+        }}
+        
         PrefabUtility.SaveAsPrefabAsset({img_name.split('_')[0]}Prefab, "Assets/Prefabs/{img_name.split('_')[0]}.prefab");
         GameObject.DestroyImmediate({img_name.split('_')[0]}Prefab);
 """
-
     setup_script += """
     }
 
@@ -393,7 +402,6 @@ public class GameSetup : EditorWindow
     {
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 """
-
     # Add generated game objects to the scene
     for img_name, img_url in game_plan.get('images', {}).items():
         if isinstance(img_url, str) and img_url.startswith('http'):
@@ -401,7 +409,6 @@ public class GameSetup : EditorWindow
         GameObject {img_name.split('_')[0]} = PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/{img_name.split('_')[0]}.prefab")) as GameObject;
         {img_name.split('_')[0]}.transform.position = new Vector3(0, 0, 0);
 """
-
     setup_script += """
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/PlayableLevel.unity");
     }
@@ -409,6 +416,7 @@ public class GameSetup : EditorWindow
     private static void CreateGameManager()
     {
         GameObject gameManager = new GameObject("GameManager");
+        gameManager.AddComponent<GameManager>();
         PrefabUtility.SaveAsPrefabAsset(gameManager, "Assets/Prefabs/GameManager.prefab");
         GameObject.DestroyImmediate(gameManager);
     }
@@ -422,7 +430,6 @@ public class GameSetup : EditorWindow
     }
 }
 """
-
     return setup_script
 
 # Generate a complete game plan
