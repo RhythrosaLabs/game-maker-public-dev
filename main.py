@@ -454,9 +454,6 @@ def display_image(image_url, caption):
         st.warning(f"Unable to display image: {caption}")
         st.error(f"Error: {str(e)}")
 
-Certainly. Here's the final part of the updated code, including the Streamlit app layout and main execution:
-
-```python
 # Help and FAQ function
 def show_help_and_faq():
     st.markdown("## Help & FAQ")
