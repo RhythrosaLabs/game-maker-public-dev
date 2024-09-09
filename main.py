@@ -313,27 +313,107 @@ def generate_additional_elements(game_concept, elements_to_generate):
 
 # Generate GameSetup.cs
 def generate_game_setup(game_plan):
-    setup_script = generate_initial_setup_script(game_plan)
-    
-    # AI check to verify and correct the code
-    prompt = f"Verify and correct the following Unity C# script for a GameSetup.cs file. Ensure it's runnable and follows best practices:\n\n{setup_script}"
-    
-    response = openai.Completion.create(
-        engine="text-davinci-002",
-        prompt=prompt,
-        max_tokens=1500,
-        n=1,
-        stop=None,
-        temperature=0.5,
-    )
-    
-    corrected_script = response.choices[0].text.strip()
-    
-    # Save the corrected script to a file in the same directory
-    with open("GameSetup.cs", "w") as file:
-        file.write(corrected_script)
-    
-    return corrected_script
+    setup_script = f"""
+using UnityEngine;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
+using System.IO;
+
+public class GameSetup : EditorWindow
+{{
+    [MenuItem("Game Setup/Create Playable Prototype")]
+    public static void SetupPlayablePrototype()
+    {{
+        CreateFolders();
+        CreateScripts();
+        CreatePrefabs();
+        SetupPlayableScene();
+        CreateGameManager();
+        ConfigureProjectSettings();
+        AssetDatabase.Refresh();
+        EditorSceneManager.OpenScene("Assets/Scenes/PlayableLevel.unity");
+        Debug.Log("Playable prototype created successfully! Press Play to test.");
+    }}
+
+    private static void CreateFolders()
+    {{
+        string[] folders = {{ "Scripts", "Prefabs", "Scenes", "Images" }};
+        foreach (string folder in folders)
+        {{
+            if (!AssetDatabase.IsValidFolder($"Assets/{{folder}}"))
+            {{
+                AssetDatabase.CreateFolder("Assets", folder);
+            }}
+        }}
+    }}
+
+    private static void CreateScripts()
+    {{
+{generate_script_creation(game_plan)}
+    }}
+
+    private static void CreatePrefabs()
+    {{
+{generate_prefab_creation(game_plan)}
+    }}
+
+    private static void SetupPlayableScene()
+    {{
+        Scene scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+{generate_scene_setup(game_plan)}
+        EditorSceneManager.SaveScene(scene, "Assets/Scenes/PlayableLevel.unity");
+    }}
+
+    private static void CreateGameManager()
+    {{
+        GameObject gameManager = new GameObject("GameManager");
+        gameManager.AddComponent<GameManager>();
+        PrefabUtility.SaveAsPrefabAsset(gameManager, "Assets/Prefabs/GameManager.prefab");
+        GameObject.DestroyImmediate(gameManager);
+    }}
+
+    private static void ConfigureProjectSettings()
+    {{
+        PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+        PlayerSettings.defaultScreenWidth = 1280;
+        PlayerSettings.defaultScreenHeight = 720;
+        PlayerSettings.resizableWindow = false;
+    }}
+}}
+"""
+    return setup_script
+
+def generate_script_creation(game_plan):
+    script_creation = ""
+    for script_name, script_content in game_plan.get('scripts', {}).items():
+        script_creation += f"""
+        File.WriteAllText("Assets/Scripts/{script_name}", @"
+{script_content}
+");
+"""
+    return script_creation
+
+def generate_prefab_creation(game_plan):
+    prefab_creation = ""
+    for img_name, img_url in game_plan.get('images', {}).items():
+        prefab_creation += f"""
+        GameObject {img_name}Prefab = new GameObject("{img_name}");
+        SpriteRenderer {img_name}Sprite = {img_name}Prefab.AddComponent<SpriteRenderer>();
+        {img_name}Sprite.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Images/{img_name}.png");
+        PrefabUtility.SaveAsPrefabAsset({img_name}Prefab, "Assets/Prefabs/{img_name}.prefab");
+        GameObject.DestroyImmediate({img_name}Prefab);
+"""
+    return prefab_creation
+
+def generate_scene_setup(game_plan):
+    scene_setup = ""
+    for img_name, _ in game_plan.get('images', {}).items():
+        scene_setup += f"""
+        GameObject {img_name} = PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/{img_name}.prefab")) as GameObject;
+        {img_name}.transform.position = new Vector3(0, 0, 0);
+"""
+    return scene_setup
 
 def generate_initial_setup_script(game_plan):
     # This function remains largely the same as your original code
