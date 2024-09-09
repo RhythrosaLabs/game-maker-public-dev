@@ -417,11 +417,11 @@ def generate_script_creation(game_plan):
 
 # Function to validate the generated script using the selected AI model
 def validate_script(script_code, role="Unity C# code validation"):
-    # Use the selected chat model for validation
     prompt = f"Please check the following Unity C# script for any syntax errors or improvements. Ensure it will run without issues in Unity and will generate a full setup scene:\n\n{script_code}"
     validated_code = generate_content(prompt, role)
     
     return validated_code
+
 
 # Generate GameSetup.cs and validate it
 def generate_and_validate_game_setup(game_plan):
