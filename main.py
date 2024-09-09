@@ -6,7 +6,7 @@ import zipfile
 from io import BytesIO
 from PIL import Image
 import replicate
-import base64 
+import base64
 
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
@@ -63,7 +63,7 @@ def get_openai_headers():
 
 # Generate content using selected chat model
 def generate_content(prompt, role):
-    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4o-mini']:
+    if st.session_state.customization['chat_model'] in ['gpt-4o', 'gpt-4o-mini']:
         data = {
             "model": st.session_state.customization['chat_model'],
             "messages": [
@@ -135,9 +135,6 @@ def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
                 aspect_ratio = "16:9" if width / height > 1.7 else "3:2"
             else:
                 aspect_ratio = "9:16" if height / width > 1.7 else "2:3"
-
-            # Debug print statement to check API key
-            print(f"Debug: Replicate API key: {st.session_state.api_keys['replicate'][:5]}...")
 
             # Initialize Replicate client with API key
             client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
@@ -316,6 +313,118 @@ def generate_additional_elements(game_concept, elements_to_generate):
     
     return additional_elements
 
+# Generate GameSetup.cs
+def generate_game_setup(game_plan):
+    setup_script = """
+using UnityEngine;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
+using System.IO;
+
+public class GameSetup : EditorWindow
+{
+    [MenuItem("Game Setup/Create Playable Prototype")]
+    public static void SetupPlayablePrototype()
+    {
+        CreateFolders();
+        CreateScripts();
+        CreatePrefabs();
+        SetupPlayableScene();
+        CreateGameManager();
+        ConfigureProjectSettings();
+        AssetDatabase.Refresh();
+        EditorSceneManager.OpenScene("Assets/Scenes/PlayableLevel.unity");
+        Debug.Log("Playable prototype created successfully! Press Play to test.");
+    }
+
+    private static void CreateFolders()
+    {
+        string[] folders = { "Assets/Scripts", "Assets/Prefabs", "Assets/Scenes", "Assets/Images" };
+        foreach (string folder in folders)
+        {
+            if (!AssetDatabase.IsValidFolder(folder))
+            {
+                AssetDatabase.CreateFolder(folder.Substring(0, folder.LastIndexOf('/')), 
+                                           folder.Substring(folder.LastIndexOf('/') + 1));
+            }
+        }
+    }
+
+    private static void CreateScripts()
+    {
+"""
+
+    # Add generated scripts
+    for script_name, script_content in game_plan.get('scripts', {}).items():
+        setup_script += f"""
+        string {script_name.split('.')[0]}Path = "Assets/Scripts/{script_name}";
+        if (!File.Exists({script_name.split('.')[0]}Path))
+        {{
+            using (StreamWriter outfile = new StreamWriter({script_name.split('.')[0]}Path))
+            {{
+                outfile.WriteLine(@"{script_content}");
+            }}
+        }}
+"""
+
+    setup_script += """
+    }
+
+    private static void CreatePrefabs()
+    {
+"""
+
+    # Add generated prefabs
+    for img_name, img_url in game_plan.get('images', {}).items():
+        if isinstance(img_url, str) and img_url.startswith('http'):
+            setup_script += f"""
+        GameObject {img_name.split('_')[0]}Prefab = new GameObject("{img_name.split('_')[0]}");
+        SpriteRenderer {img_name.split('_')[0]}Sprite = {img_name.split('_')[0]}Prefab.AddComponent<SpriteRenderer>();
+        {img_name.split('_')[0]}Sprite.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Images/{img_name}.png");
+        PrefabUtility.SaveAsPrefabAsset({img_name.split('_')[0]}Prefab, "Assets/Prefabs/{img_name.split('_')[0]}.prefab");
+        GameObject.DestroyImmediate({img_name.split('_')[0]}Prefab);
+"""
+
+    setup_script += """
+    }
+
+    private static void SetupPlayableScene()
+    {
+        Scene scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+"""
+
+    # Add generated game objects to the scene
+    for img_name, img_url in game_plan.get('images', {}).items():
+        if isinstance(img_url, str) and img_url.startswith('http'):
+            setup_script += f"""
+        GameObject {img_name.split('_')[0]} = PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/{img_name.split('_')[0]}.prefab")) as GameObject;
+        {img_name.split('_')[0]}.transform.position = new Vector3(0, 0, 0);
+"""
+
+    setup_script += """
+        EditorSceneManager.SaveScene(scene, "Assets/Scenes/PlayableLevel.unity");
+    }
+
+    private static void CreateGameManager()
+    {
+        GameObject gameManager = new GameObject("GameManager");
+        PrefabUtility.SaveAsPrefabAsset(gameManager, "Assets/Prefabs/GameManager.prefab");
+        GameObject.DestroyImmediate(gameManager);
+    }
+
+    private static void ConfigureProjectSettings()
+    {
+        PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+        PlayerSettings.defaultScreenWidth = 1280;
+        PlayerSettings.defaultScreenHeight = 720;
+        PlayerSettings.resizableWindow = false;
+    }
+}
+"""
+
+    return setup_script
+
 # Generate a complete game plan
 def generate_game_plan(user_prompt, customization):
     game_plan = {}
@@ -486,8 +595,8 @@ with st.sidebar:
     # Model Selection
     st.markdown("### AI Model Selection")
     st.session_state.customization['chat_model'] = st.selectbox(
-        "Select Chat Model",
-        options=['gpt-4', 'gpt-4o-mini', 'llama'],
+        "Select Text Model",
+        options=['gpt-4o', 'gpt-4o-mini', 'llama'],
         index=0
     )
     st.session_state.customization['image_model'] = st.selectbox(
@@ -524,7 +633,13 @@ with tab2:
                 min_value=0, 
                 value=st.session_state.customization['image_count'][img_type]
             )
-        
+        with col2:
+            if img_type in ['Character', 'Enemy', 'Object', 'UI']:
+                st.session_state.customization['convert_to_3d'][img_type] = st.checkbox(
+                    "Make 3D",
+                    value=st.session_state.customization['convert_to_3d'][img_type],
+                    key=f"3d_checkbox_{img_type}"
+                )
 
 with tab3:
     st.markdown('<p class="section-header">Script Generation</p>', unsafe_allow_html=True)
@@ -660,6 +775,10 @@ if st.button("Generate Game Plan", key="generate_button"):
                 except requests.RequestException as e:
                     st.error(f"Error downloading music: {str(e)}")
 
+            # Add GameSetup.cs
+            game_setup_script = generate_game_setup(game_plan)
+            zip_file.writestr("Assets/Editor/GameSetup.cs", game_setup_script)
+
         st.download_button(
             "Download Game Plan ZIP",
             zip_buffer.getvalue(),
@@ -678,10 +797,10 @@ if st.button("Generate Game Plan", key="generate_button"):
 # Footer
 st.markdown("---")
 st.markdown("""
-    Created by [Daniel Sheils](http://linkedin.com/in/danielsheils/) | 
-    [GitHub](https://github.com/RhythrosaLabs/game-maker) | 
-    [Twitter](https://twitter.com/rhythrosalabs) | 
-    [Instagram](https://instagram.com/rhythrosalabs)
+    Created by [Your Name/Company] | 
+    [GitHub](https://github.com/yourusername/yourrepository) | 
+    [Twitter](https://twitter.com/yourtwitter) | 
+    [Website](https://www.yourwebsite.com)
     """, unsafe_allow_html=True)
 
 # Initialize Replicate client
