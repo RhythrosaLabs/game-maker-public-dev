@@ -381,19 +381,35 @@ public class GameSetup : EditorWindow
         PlayerSettings.resizableWindow = false;
     }}
 }}
+
+// The GameManager class is included directly within the same file
+public class GameManager : MonoBehaviour
+{{
+    public static GameManager instance;
+
+    void Awake()
+    {{
+        if (instance == null)
+        {{
+            instance = this;
+            DontDestroyOnLoad(gameObject);
+        }}
+        else
+        {{
+            Destroy(gameObject);
+        }}
+    }}
+    // Add your game management logic here
+}}
 """
     return setup_script
+
     
 def generate_script_creation(game_plan):
     script_creation = ""
     for script_name, script_content in game_plan.get('scripts', {}).items():
-        # Remove any existing escaping
-        script_content = script_content.replace("\\", "")
-        # Escape double quotes
-        script_content = script_content.replace('"', '\\"')
-        # Replace newlines with actual newline characters
-        script_content = script_content.replace("\n", "\\n")
-        
+        # Escape double quotes and handle newlines
+        script_content = script_content.replace('"', '\\"').replace("\n", "\\n")
         script_creation += f"""
         File.WriteAllText("Assets/Scripts/{script_name}", @"{script_content}");
 """
@@ -434,6 +450,7 @@ def generate_prefab_creation(game_plan):
         GameObject.DestroyImmediate({img_name}Prefab);
 """
     return prefab_creation
+
 
 def generate_scene_setup(game_plan):
     scene_setup = ""
