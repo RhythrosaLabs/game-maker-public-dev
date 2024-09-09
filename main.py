@@ -383,14 +383,17 @@ public class GameSetup : EditorWindow
 }}
 """
     return setup_script
-
+    
 def generate_script_creation(game_plan):
     script_creation = ""
     for script_name, script_content in game_plan.get('scripts', {}).items():
-        # Remove code block markers and language specifiers
-        script_content = script_content.replace("```csharp", "").replace("```", "").strip()
-        # Escape double quotes and newlines
-        script_content = script_content.replace('"', '\\"').replace("\n", "\\n")
+        # Remove any existing escaping
+        script_content = script_content.replace("\\", "")
+        # Escape double quotes
+        script_content = script_content.replace('"', '\\"')
+        # Replace newlines with actual newline characters
+        script_content = script_content.replace("\n", "\\n")
+        
         script_creation += f"""
         File.WriteAllText("Assets/Scripts/{script_name}", @"{script_content}");
 """
