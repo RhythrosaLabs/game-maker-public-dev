@@ -399,6 +399,30 @@ def generate_script_creation(game_plan):
 """
     return script_creation
 
+# Function to validate the generated script using the selected AI model
+def validate_script(script_code, role="Unity C# code validation"):
+    # Use the selected chat model for validation
+    prompt = f"Please check the following Unity C# script for any syntax errors or improvements. Ensure it will run without issues in Unity and will generate a full setup scene:\n\n{script_code}"
+    validated_code = generate_content(prompt, role)
+    
+    return validated_code
+
+# Generate GameSetup.cs and validate it
+def generate_and_validate_game_setup(game_plan):
+    # Generate the initial GameSetup.cs script
+    setup_script = generate_game_setup(game_plan)
+    
+    # Validate the generated script using the AI model
+    validated_script = validate_script(setup_script)
+    
+    # Display the validated script
+    st.subheader("Validated GameSetup.cs")
+    st.code(validated_script, language='csharp')
+
+    # Optionally, you can overwrite the generated script with the validated one
+    return validated_script
+
+
 def generate_prefab_creation(game_plan):
     prefab_creation = ""
     for img_name, img_url in game_plan.get('images', {}).items():
