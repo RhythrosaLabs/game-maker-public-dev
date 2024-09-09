@@ -20,6 +20,7 @@ API_KEY_FILE = "api_key.json"
 if 'api_keys' not in st.session_state:
     st.session_state.api_keys = {'openai': None, 'replicate': None}
 
+# Initialize session state
 if 'customization' not in st.session_state:
     st.session_state.customization = {
         'image_types': ['Character', 'Enemy', 'Background', 'Object', 'Texture', 'Sprite', 'UI'],
@@ -48,6 +49,7 @@ if 'customization' not in st.session_state:
             'items': False
         }
     }
+
 
 # Load API keys from a file
 def load_api_keys():
@@ -614,6 +616,7 @@ with tab4:
     
     st.session_state.customization['use_replicate']['generate_music'] = st.checkbox("Generate Background Music", value=st.session_state.customization['use_replicate']['generate_music'])
 
+# Later in the code, when setting up the Procedural Generation tab:
 with tab5:
     st.markdown('<p class="section-header">Procedural Generation</p>', unsafe_allow_html=True)
     st.markdown('<p class="info-text">Select elements to be procedurally generated:</p>', unsafe_allow_html=True)
