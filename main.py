@@ -387,10 +387,12 @@ public class GameSetup : EditorWindow
 def generate_script_creation(game_plan):
     script_creation = ""
     for script_name, script_content in game_plan.get('scripts', {}).items():
+        # Remove code block markers and language specifiers
+        script_content = script_content.replace("```csharp", "").replace("```", "").strip()
+        # Escape double quotes and newlines
+        script_content = script_content.replace('"', '\\"').replace("\n", "\\n")
         script_creation += f"""
-        File.WriteAllText("Assets/Scripts/{script_name}", @"
-{script_content}
-");
+        File.WriteAllText("Assets/Scripts/{script_name}", @"{script_content}");
 """
     return script_creation
 
