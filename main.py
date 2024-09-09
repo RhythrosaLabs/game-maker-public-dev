@@ -636,7 +636,6 @@ with tab5:
             "Procedural Item Generation", 
             value=st.session_state.customization['procedural_generation']['items']
         )
-
 # Generate Game Plan
 if st.button("Generate Game Plan", key="generate_button"):
     if not st.session_state.api_keys['openai'] or not st.session_state.api_keys['replicate']:
@@ -755,6 +754,7 @@ if st.button("Generate Game Plan", key="generate_button"):
                 if isinstance(img_url, str) and img_url.startswith('http'):
                     img_response = requests.get(img_url)
                     img_path = os.path.join(temp_dir, 'Assets', 'Images', img_type.capitalize(), f"{img_type}.png")
+                    os.makedirs(os.path.dirname(img_path), exist_ok=True)
                     with open(img_path, 'wb') as img_file:
                         img_file.write(img_response.content)
 
@@ -765,12 +765,14 @@ if st.button("Generate Game Plan", key="generate_button"):
                         if url and url.startswith('http'):
                             model_response = requests.get(url)
                             model_path = os.path.join(temp_dir, 'Assets', 'Models', model_type.capitalize(), f"{model_type}.{format}")
+                            os.makedirs(os.path.dirname(model_path), exist_ok=True)
                             with open(model_path, 'wb') as model_file:
                                 model_file.write(model_response.content)
 
             # Export scripts
             for script_name, script_content in game_plan['scripts'].items():
                 script_path = os.path.join(temp_dir, 'Assets', 'Scripts', script_name)
+                os.makedirs(os.path.dirname(script_path), exist_ok=True)
                 with open(script_path, 'w') as script_file:
                     script_file.write(script_content)
 
@@ -778,6 +780,7 @@ if st.button("Generate Game Plan", key="generate_button"):
             for proc_type in ['procedural_world', 'procedural_levels', 'procedural_items']:
                 if proc_type in game_plan:
                     proc_path = os.path.join(temp_dir, 'Assets', 'Scripts', 'Procedural', f"{proc_type}.py")
+                    os.makedirs(os.path.dirname(proc_path), exist_ok=True)
                     with open(proc_path, 'w') as proc_file:
                         proc_file.write(game_plan[proc_type])
 
@@ -785,6 +788,7 @@ if st.button("Generate Game Plan", key="generate_button"):
             if 'music' in game_plan:
                 music_response = requests.get(game_plan['music'])
                 music_path = os.path.join(temp_dir, 'Assets', 'Audio', 'Music', 'background_music.mp3')
+                os.makedirs(os.path.dirname(music_path), exist_ok=True)
                 with open(music_path, 'wb') as music_file:
                     music_file.write(music_response.content)
 
@@ -792,28 +796,33 @@ if st.button("Generate Game Plan", key="generate_button"):
             for doc_name in ['game_concept', 'world_concept', 'character_concepts', 'plot']:
                 if doc_name in game_plan:
                     doc_path = os.path.join(temp_dir, 'Docs', f"{doc_name}.txt")
+                    os.makedirs(os.path.dirname(doc_path), exist_ok=True)
                     with open(doc_path, 'w') as doc_file:
                         doc_file.write(game_plan[doc_name])
 
             # Export additional elements
             for element_name, element_content in game_plan.get('additional_elements', {}).items():
                 element_path = os.path.join(temp_dir, 'Docs', f"{element_name}.txt")
+                os.makedirs(os.path.dirname(element_path), exist_ok=True)
                 with open(element_path, 'w') as element_file:
                     element_file.write(element_content)
 
             # Create a game_plan.json file with all the information
             game_plan_path = os.path.join(temp_dir, 'game_plan.json')
+            os.makedirs(os.path.dirname(game_plan_path), exist_ok=True)
             with open(game_plan_path, 'w') as game_plan_file:
                 json.dump(game_plan, game_plan_file, indent=2)
 
             # Generate and export setup scripts
             unity_setup_script = generate_unity_setup_script(game_plan)
             unity_setup_path = os.path.join(temp_dir, 'SetupScripts', 'UnitySetup.cs')
+            os.makedirs(os.path.dirname(unity_setup_path), exist_ok=True)
             with open(unity_setup_path, 'w') as unity_setup_file:
                 unity_setup_file.write(unity_setup_script)
 
             unreal_setup_script = generate_unreal_setup_script(game_plan)
             unreal_setup_path = os.path.join(temp_dir, 'SetupScripts', 'UnrealSetup.py')
+            os.makedirs(os.path.dirname(unreal_setup_path), exist_ok=True)
             with open(unreal_setup_path, 'w') as unreal_setup_file:
                 unreal_setup_file.write(unreal_setup_script)
 
