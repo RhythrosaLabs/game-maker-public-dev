@@ -791,6 +791,9 @@ if st.button("Generate Game Plan", key="generate_button"):
             game_plan = generate_game_plan(user_prompt, st.session_state.customization)
         st.success('Game plan generated successfully!')
 
+        # Generate GameSetup.cs
+        game_setup_script = generate_game_setup(game_plan)
+
         # Display game plan results
         st.markdown('<p class="section-header">Generated Game Plan</p>', unsafe_allow_html=True)
 
@@ -829,7 +832,7 @@ if st.button("Generate Game Plan", key="generate_button"):
             st.write("### Scripts")
             for script_name, script_code in game_plan['scripts'].items():
                 with st.expander(f"View {script_name}"):
-                    st.code(script_code, language='python')
+                    st.code(script_code, language='csharp')
 
         if 'additional_elements' in game_plan:
             st.subheader("Additional Game Elements")
@@ -883,15 +886,14 @@ if st.button("Generate Game Plan", key="generate_button"):
                     st.error(f"Error downloading music: {str(e)}")
 
             # Add GameSetup.cs
-            game_setup_script = generate_game_setup(game_plan)
-            zip_file.writestr("Assets/Editor/GameSetup.cs", game_setup_script)
+            zip_file.writestr("GameSetup.cs", game_setup_script)
 
         st.download_button(
             "Download Game Plan ZIP",
             zip_buffer.getvalue(),
             file_name="game_plan.zip",
             mime="application/zip",
-            help="Download a ZIP file containing all generated assets and documents."
+            help="Download a ZIP file containing all generated assets and documents, including GameSetup.cs."
         )
 
         # Display generated music if applicable
@@ -900,7 +902,6 @@ if st.button("Generate Game Plan", key="generate_button"):
             st.audio(game_plan['music'], format='audio/mp3')
         else:
             st.warning("No music was generated or an error occurred during music generation.")
-
 # Footer
 st.markdown("---")
 st.markdown("""
