@@ -259,65 +259,71 @@ def generate_images(customization, game_concept):
     return images
 
 # Clean generated code
+# Clean generated code to ensure full runnable scripts only
 def clean_generated_code(raw_code):
-    # Remove markdown code block syntax if present
+    # Remove code block markdown if present
     code = re.sub(r'```[\w]*\n|```', '', raw_code)
     
-    # Remove any leading text before the actual code starts
-    code = re.sub(r'^.*?(import|using|#include|public class)', r'\1', code, flags=re.DOTALL)
-    
-    # Remove any trailing text after the last code line
-    code = re.sub(r'\n\s*\n.*$', '', code, flags=re.DOTALL)
-    
-    # Remove any single-line comments that might be instructions or explanations
+    # Remove leading intros or comments before the actual code begins
+    code = re.sub(r'^[^(\nimport|\nusing|\n#include)].*?(import|using|#include|public class)', r'\1', code, flags=re.DOTALL)
+
+    # Remove trailing content after the last code line
+    code = re.sub(r'(\n\s*\n.*$)', '', code, flags=re.DOTALL)
+
+    # Remove comments that are not part of the actual code logic
     code = re.sub(r'^\s*//.*$', '', code, flags=re.MULTILINE)
-    
-    # Remove any potential multi-line comments at the start or end
-    code = re.sub(r'^/\*.*?\*/\s*', '', code, flags=re.DOTALL)
-    code = re.sub(r'\s*/\*.*?\*/$', '', code, flags=re.DOTALL)
-    
-    # Trim leading and trailing whitespace
-    code = code.strip()
-    
-    return code
+
+    # Remove multiline comments and instructions
+    code = re.sub(r'/\*.*?\*/', '', code, flags=re.DOTALL)
+
+    return code.strip()
+
+# Handle truncated responses and ensure full script generation
+def handle_truncated_response(response, prompt):
+    full_script = clean_generated_code(response)
+    while len(full_script) < 100 or full_script.endswith('...'):  # Check for truncation or incomplete code
+        continuation_prompt = f"Continue the following code: {full_script[-200:]}"
+        continuation = generate_content(continuation_prompt, "code generation")
+        full_script += clean_generated_code(continuation)
+    return full_script
 
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
-    # Modular script descriptions based on user-selected code type
-    script_descriptions = {
-        'unity': {
-            'Player': f"Create a Unity C# player character script for a 2D game. The player should move using WASD controls and be able to jump. Add proper comments and optimizations for game development.",
-            'Enemy': f"Create a Unity C# enemy AI script for a 2D game. The enemy should patrol, chase the player, and attack when close.",
-            'Game Object': f"Create a Unity C# script for an interactive game object that responds to player interaction with animations.",
-            'Level Background': f"Create a Unity C# script to manage parallax scrolling for background layers in a 2D game."
-        },
-        'unreal': {
-            'Player': f"Create an Unreal C++ player character script for a 2D game with WASD movement and jumping.",
-            'Enemy': f"Create an Unreal C++ enemy AI script with patrolling, chasing, and attacking logic.",
-            'Game Object': f"Create an Unreal C++ script for a game object that interacts with the player.",
-            'Level Background': f"Create an Unreal C++ script for managing background scrolling in a 2D game."
-        },
-        'blender': {
-            'Player': f"Create a Blender Python script for controlling a 3D character model in a game engine.",
-            'Enemy': f"Create a Blender Python script for enemy character animations and AI logic.",
-            'Game Object': f"Create a Blender Python script for interacting with game objects using physics-based interactions.",
-            'Level Background': f"Create a Blender Python script for handling background and environment setup in a 3D game."
-        }
-    }
-
     scripts = {}
     code_type = 'unity' if customization['code_types']['unity'] else 'unreal' if customization['code_types']['unreal'] else 'blender'
 
+    # Modular script descriptions based on user-selected code type
+    script_descriptions = {
+        'unity': {
+            'Player': "Create a Unity C# player script for a 2D game with WASD controls and jump. Keep it simple without additional explanations or comments.",
+            'Enemy': "Create a Unity C# enemy AI script for a 2D game. The enemy should patrol, chase the player, and attack when in range.",
+            'Game Object': "Create a Unity C# script for an interactive game object that responds to player interaction and triggers animations.",
+            'Level Background': "Create a Unity C# script to manage parallax scrolling for background layers in a 2D game."
+        },
+        'unreal': {
+            'Player': "Create an Unreal C++ player character script for a 2D game with WASD movement and jump mechanics, no additional comments.",
+            'Enemy': "Create an Unreal C++ enemy AI script that includes patrolling, chasing, and attacking the player when close.",
+            'Game Object': "Create an Unreal C++ script for a game object that interacts with the player in a 2D environment.",
+            'Level Background': "Create an Unreal C++ script for handling background parallax scrolling in a 2D game."
+        },
+        'blender': {
+            'Player': "Create a Blender Python script to control a 3D player model with basic movement controls for a 2D game.",
+            'Enemy': "Create a Blender Python script for enemy AI animations and behavior in a 2D game.",
+            'Game Object': "Create a Blender Python script for interacting with objects in a 2D game, using physics-based interactions.",
+            'Level Background': "Create a Blender Python script to manage background setup and animations for a 2D game environment."
+        }
+    }
+
+    # Generate scripts for each type specified
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
             desc = script_descriptions[code_type][script_type]
 
             # Generate content using OpenAI or Replicate depending on code model
             if customization['code_model'] in ['gpt-4o', 'gpt-4o-mini']:
-                script_code = generate_content(desc, "code generation")  # Use generate_content for OpenAI models
+                script_code = generate_content(desc, "code generation")
             else:
-                # If using Replicate (CodeLlama), adapt accordingly
-                script_code = generate_content(desc, "code generation")  # For now, use the same function
+                script_code = generate_content(desc, "code generation")
 
             # Handle truncation if needed
             full_script = handle_truncated_response(script_code, desc)
@@ -327,13 +333,7 @@ def generate_scripts(customization, game_concept):
 
     return scripts
 
-def handle_truncated_response(response, prompt):
-    full_response = response
-    while len(full_response) < 100 or full_response.endswith('...'):  # Simple check for truncation
-        continuation_prompt = f"Continue the following code: {full_response[-200:]}"
-        continuation = generate_content(continuation_prompt, "code generation")
-        full_response += continuation
-    return full_response
+
 
 def save_script_to_file(script_name, script_content, output_dir):
     script_path = os.path.join(output_dir, f"{script_name}.py")
