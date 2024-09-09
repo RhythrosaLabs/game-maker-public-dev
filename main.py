@@ -284,42 +284,63 @@ def clean_generated_code(raw_code):
 
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
+    # Modular script descriptions based on user-selected code type
     script_descriptions = {
-        'Player': f"Create a comprehensive player character script for a 2D game. The character should have WASD movement, jumping with spacebar, and an action button (e.g., attack or interact). Implement smooth movement, basic physics (gravity and collision), and state management (idle, walking, jumping, attacking). The player should fit the following game concept: {game_concept}. Include comments explaining each major component and potential areas for expansion.",
-        'Enemy': f"Develop a detailed enemy AI script for a 2D game. The enemy should have basic pathfinding, player detection, and attack mechanics. Implement different states (idle, patrolling, chasing, attacking) and ensure smooth transitions between them. The enemy behavior should fit the following game concept: {game_concept}. Include comments explaining the AI logic and suggestions for scaling difficulty.",
-        'Game Object': f"Script a versatile game object that can be used for various purposes in a 2D game. This could be a collectible item, a trap, or an interactive element. Implement functionality for player interaction, animation states, and any special effects. The object should fit the following game concept: {game_concept}. Include comments on how to easily modify the script for different object types.",
-        'Level Background': f"Create a script to manage the level background in a 2D game. This should handle parallax scrolling with multiple layers, potential day/night cycles, and any interactive background elements. The background should fit the following game concept: {game_concept}. Include optimization tips and comments on how to extend the script for more complex backgrounds."
+        'unity': {
+            'Player': f"Create a Unity C# player character script for a 2D game. The player should move using WASD controls and be able to jump. Add proper comments and optimizations for game development.",
+            'Enemy': f"Create a Unity C# enemy AI script for a 2D game. The enemy should patrol, chase the player, and attack when close.",
+            'Game Object': f"Create a Unity C# script for an interactive game object that responds to player interaction with animations.",
+            'Level Background': f"Create a Unity C# script to manage parallax scrolling for background layers in a 2D game."
+        },
+        'unreal': {
+            'Player': f"Create an Unreal C++ player character script for a 2D game with WASD movement and jumping.",
+            'Enemy': f"Create an Unreal C++ enemy AI script with patrolling, chasing, and attacking logic.",
+            'Game Object': f"Create an Unreal C++ script for a game object that interacts with the player.",
+            'Level Background': f"Create an Unreal C++ script for managing background scrolling in a 2D game."
+        },
+        'blender': {
+            'Player': f"Create a Blender Python script for controlling a 3D character model in a game engine.",
+            'Enemy': f"Create a Blender Python script for enemy character animations and AI logic.",
+            'Game Object': f"Create a Blender Python script for interacting with game objects using physics-based interactions.",
+            'Level Background': f"Create a Blender Python script for handling background and environment setup in a 3D game."
+        }
     }
-    
+
     scripts = {}
+    code_type = 'unity' if customization['code_types']['unity'] else 'unreal' if customization['code_types']['unreal'] else 'blender'
+
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
-            desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
-            
-            if customization['code_model'] in ['gpt-4o', 'gpt-4o-mini']:
-                # Use OpenAI API for GPT-4 models
-                script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
-            elif customization['code_model'] == 'CodeLlama-34B':
-                # Use Replicate API for CodeLlama
-                try:
-                    client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
-                    output = client.run(
-                        "andreasjansson/codellama-34b-instruct-gguf:97a1fb465d5cdf2854c89ebeaee3ceb353206b8187b665a83bcf6efd21e534ab",
-                        input={
-                            "prompt": f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.",
-                            "grammar": "root        ::= \"```python\\n\" code \"```\"\ncode        ::= [^`]+",
-                            "jsonschema": ""
-                        }
-                    )
-                    script_code = ''.join(output)
-                except Exception as e:
-                    script_code = f"Error generating script: {str(e)}"
-            else:
-                script_code = "Error: Invalid code model selected."
+            desc = script_descriptions[code_type][script_type]
 
-            scripts[f"{script_type.lower()}_script_{i + 1}.py"] = clean_generated_code(script_code)
+            # Generate content using OpenAI or Replicate depending on code model
+            if customization['code_model'] in ['gpt-4o', 'gpt-4o-mini']:
+                script_code = generate_full_script(desc)  # generate full code
+            else:
+                # If using Replicate (CodeLlama), adapt accordingly
+                script_code = replicate_code_generation(desc)
+
+            # Handle truncation if needed
+            full_script = handle_truncated_response(script_code, desc)
+
+            # Ensure the entire script is saved to one file
+            scripts[f"{script_type.lower()}_{code_type}_script_{i + 1}.py"] = clean_generated_code(full_script)
 
     return scripts
+
+def handle_truncated_response(response, prompt):
+    full_response = response
+    while is_incomplete(full_response):  # Define how to check if the response is incomplete
+        continuation_prompt = f"Continue from: {full_response[-200:]}"  # Send last part of the code
+        continuation = generate_content(continuation_prompt, "code")  # API call for continuation
+        full_response += continuation
+    return full_response
+
+def save_script_to_file(script_name, script_content, output_dir):
+    script_path = os.path.join(output_dir, f"{script_name}.py")
+    with open(script_path, 'w') as script_file:
+        script_file.write(script_content)
+
 
 # Generate additional game elements
 def generate_additional_elements(game_concept, elements_to_generate):
@@ -828,6 +849,16 @@ if st.button("Generate Game Plan", key="generate_button"):
 
             # Create a ZIP file from the temporary directory
             shutil.make_archive("game_plan", 'zip', temp_dir)
+
+        # Provide download button for the ZIP file
+        with open("game_plan.zip", "rb") as f:
+            st.download_button(
+                label="Download Game Plan ZIP",
+                data=f,
+                file_name="game_plan.zip",
+                mime="application/zip"
+            )
+
 
         # Provide download button for the ZIP file
         with open("game_plan.zip", "rb") as f:
