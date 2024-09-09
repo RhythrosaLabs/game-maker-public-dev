@@ -757,12 +757,14 @@ if st.button("Generate Game Plan", key="generate_button"):
                 else:
                     st.write(f"{img_name}: {img_url}")
 
-        if 'scripts' in game_plan:
-            st.write("### Scripts")
-            for script_name, script_code in game_plan['scripts'].items():
-                with st.expander(f"View {script_name}"):
-                    st.code(script_code, language='csharp')
-
+        if 'scripts' in game_plan or 'images' in game_plan:
+            game_setup_script = generate_game_setup(game_plan)
+            validated_script = validate_script(game_setup_script)
+            st.subheader("Generated GameSetup.cs")
+            st.code(validated_script, language='csharp')
+        
+            # Save the validated GameSetup.cs script into the ZIP file
+            zip_file.writestr("GameSetup.cs", validated_script)
         if 'additional_elements' in game_plan:
             st.subheader("Additional Game Elements")
             for element_name, element_content in game_plan['additional_elements'].items():
