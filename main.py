@@ -7,7 +7,6 @@ from io import BytesIO
 from PIL import Image
 import replicate
 import base64
-import re
 
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
@@ -312,35 +311,7 @@ def generate_additional_elements(game_concept, elements_to_generate):
     
     return additional_elements
 
-def validate_and_fix_csharp_code(csharp_code):
-    # Step 1: Check for unbalanced braces
-    open_braces = csharp_code.count('{')
-    close_braces = csharp_code.count('}')
-    
-    if open_braces != close_braces:
-        print("Error: Unbalanced braces detected. Please check your code structure.")
-        # Optionally, fix unbalanced braces by adding missing ones at the end of the code.
-        while open_braces > close_braces:
-            csharp_code += "}"
-            close_braces += 1
-        print("Braces balanced.")
-
-    # Step 2: Check for missing semicolons
-    lines = csharp_code.split('\n')
-    corrected_lines = []
-    for line in lines:
-        # Ignore empty lines and block starting lines
-        if line.strip() and not line.strip().endswith((';', '{', '}')) and not re.match(r'^(if|for|while|switch|catch|else|using)', line.strip()):
-            line += ';'
-        corrected_lines.append(line)
-    
-    # Step 3: Ensure string escaping for special characters
-    csharp_code = "\n".join(corrected_lines)
-    csharp_code = csharp_code.replace('\\', '\\\\')  # Escape backslashes
-    csharp_code = csharp_code.replace('"', '\\"')    # Escape double quotes in strings
-
-    return csharp_code
-
+# Generate GameSetup.cs
 def generate_game_setup(game_plan):
     setup_script = f"""
 using UnityEngine;
@@ -411,32 +382,22 @@ public class GameSetup : EditorWindow
     }}
 }}
 """
-    return validate_and_fix_csharp_code(setup_script)
-
+    return setup_script
+    
 def generate_script_creation(game_plan):
     script_creation = ""
     for script_name, script_content in game_plan.get('scripts', {}).items():
-        # Escape double quotes and handle other potential formatting issues
+        # Remove any existing escaping
         script_content = script_content.replace("\\", "")
+        # Escape double quotes
         script_content = script_content.replace('"', '\\"')
+        # Replace newlines with actual newline characters
         script_content = script_content.replace("\n", "\\n")
         
         script_creation += f"""
         File.WriteAllText("Assets/Scripts/{script_name}", @"{script_content}");
 """
     return script_creation
-
-# Example game_plan to pass into the script
-game_plan = {
-    'scripts': {
-        'PlayerController.cs': 'public class PlayerController { /* Player control logic */ }',
-        'EnemyAI.cs': 'public class EnemyAI { /* Enemy AI logic */ }',
-    }
-}
-
-# Generate and validate the game setup script
-script = generate_game_setup(game_plan)
-print(script)
 
 def generate_prefab_creation(game_plan):
     prefab_creation = ""
@@ -449,7 +410,6 @@ def generate_prefab_creation(game_plan):
         GameObject.DestroyImmediate({img_name}Prefab);
 """
     return prefab_creation
-
 
 def generate_scene_setup(game_plan):
     scene_setup = ""
