@@ -415,123 +415,6 @@ def generate_scene_setup(game_plan):
 """
     return scene_setup
 
-def generate_initial_setup_script(game_plan):
-    # This function remains largely the same as your original code
-    setup_script = """
-using UnityEngine;
-using UnityEditor;
-using UnityEditor.SceneManagement;
-using UnityEngine.SceneManagement;
-using System.IO;
-
-public class GameSetup : EditorWindow
-{
-    [MenuItem("Game Setup/Create Playable Prototype")]
-    public static void SetupPlayablePrototype()
-    {
-        CreateFolders();
-        CreateScripts();
-        CreatePrefabs();
-        SetupPlayableScene();
-        CreateGameManager();
-        ConfigureProjectSettings();
-        AssetDatabase.Refresh();
-        EditorSceneManager.OpenScene("Assets/Scenes/PlayableLevel.unity");
-        Debug.Log("Playable prototype created successfully! Press Play to test.");
-    }
-
-    private static void CreateFolders()
-    {
-        string[] folders = { "Scripts", "Prefabs", "Scenes", "Images" };
-        foreach (string folder in folders)
-        {
-            if (!AssetDatabase.IsValidFolder($"Assets/{folder}"))
-            {
-                AssetDatabase.CreateFolder("Assets", folder);
-            }
-        }
-    }
-
-    private static void CreateScripts()
-    {
-"""
-    # Add generated scripts
-    for script_name, script_content in game_plan.get('scripts', {}).items():
-        setup_script += f"""
-        string {script_name.split('.')[0]}Path = $"Assets/Scripts/{script_name}";
-        if (!File.Exists({script_name.split('.')[0]}Path))
-        {{
-            using (StreamWriter outfile = new StreamWriter({script_name.split('.')[0]}Path))
-            {{
-                outfile.WriteLine(@"{script_content}");
-            }}
-        }}
-"""
-    setup_script += """
-    }
-
-    private static void CreatePrefabs()
-    {
-"""
-    # Add generated prefabs
-    for img_name, img_url in game_plan.get('images', {}).items():
-        if isinstance(img_url, str) and img_url.startswith('http'):
-            setup_script += f"""
-        GameObject {img_name.split('_')[0]}Prefab = new GameObject("{img_name.split('_')[0]}");
-        SpriteRenderer {img_name.split('_')[0]}Sprite = {img_name.split('_')[0]}Prefab.AddComponent<SpriteRenderer>();
-        {img_name.split('_')[0]}Sprite.sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/Images/{img_name}.png");
-        
-        // Add corresponding script component if it exists
-        System.Type scriptType = System.Type.GetType("{img_name.split('_')[0]}");
-        if (scriptType != null)
-        {{
-            {img_name.split('_')[0]}Prefab.AddComponent(scriptType);
-        }}
-        
-        PrefabUtility.SaveAsPrefabAsset({img_name.split('_')[0]}Prefab, $"Assets/Prefabs/{img_name.split('_')[0]}.prefab");
-        GameObject.DestroyImmediate({img_name.split('_')[0]}Prefab);
-"""
-    setup_script += """
-    }
-
-    private static void SetupPlayableScene()
-    {
-        Scene scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-"""
-    # Add generated game objects to the scene
-    for img_name, img_url in game_plan.get('images', {}).items():
-        if isinstance(img_url, str) and img_url.startswith('http'):
-            setup_script += f"""
-        GameObject {img_name.split('_')[0]} = PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Prefabs/{img_name.split('_')[0]}.prefab")) as GameObject;
-        {img_name.split('_')[0]}.transform.position = new Vector3(0, 0, 0);
-"""
-    setup_script += """
-        EditorSceneManager.SaveScene(scene, "Assets/Scenes/PlayableLevel.unity");
-    }
-
-    private static void CreateGameManager()
-    {
-        GameObject gameManager = new GameObject("GameManager");
-        gameManager.AddComponent<GameManager>();
-        PrefabUtility.SaveAsPrefabAsset(gameManager, "Assets/Prefabs/GameManager.prefab");
-        GameObject.DestroyImmediate(gameManager);
-    }
-
-    private static void ConfigureProjectSettings()
-    {
-        PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
-        PlayerSettings.defaultScreenWidth = 1280;
-        PlayerSettings.defaultScreenHeight = 720;
-        PlayerSettings.resizableWindow = false;
-    }
-}
-"""
-    return setup_script
-
-# Usage
-game_plan = generate_game_plan(user_prompt, st.session_state.customization)
-game_setup_script = generate_game_setup(game_plan)
-
 # Generate a complete game plan
 def generate_game_plan(user_prompt, customization):
     game_plan = {}
@@ -902,6 +785,7 @@ if st.button("Generate Game Plan", key="generate_button"):
             st.audio(game_plan['music'], format='audio/mp3')
         else:
             st.warning("No music was generated or an error occurred during music generation.")
+
 # Footer
 st.markdown("---")
 st.markdown("""
