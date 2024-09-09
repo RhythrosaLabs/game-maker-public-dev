@@ -450,6 +450,7 @@ def generate_prefab_creation(game_plan):
 """
     return prefab_creation
 
+
 def generate_scene_setup(game_plan):
     scene_setup = ""
     for img_name, _ in game_plan.get('images', {}).items():
