@@ -231,6 +231,7 @@ def generate_scripts(customization, game_concept):
     
     scripts = {}
     selected_code_types = customization['code_types']
+    code_model = customization['code_model']  # Use the correct key from customization
 
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
@@ -243,12 +244,12 @@ def generate_scripts(customization, game_concept):
             if selected_code_types['blender']:
                 desc += " Generate a Blender Python script."
 
-            if code_model_type in ['gpt-4o', 'gpt-4o-mini']:
+            if code_model in ['gpt-4o', 'gpt-4o-mini']:
                 script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
-            elif code_model_type == 'CodeLlama-34B':
+            elif code_model == 'llama':  # Changed from 'CodeLlama-34B' to 'llama' to match your model options
                 try:
                     output = replicate.run(
-                        "meta/codellama-34b:b170b7f9660f9503a923f75a5c590e34e9dceda486e9ce5b2c2814d861632f8d",
+                        "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
                         input={
                             "prompt": f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.",
                             "temperature": 0.7,
@@ -259,7 +260,7 @@ def generate_scripts(customization, game_concept):
                     )
                     script_code = ''.join(output)
                 except Exception as e:
-                    script_code = f"Error: Unable to generate script using CodeLlama-34B: {str(e)}"
+                    script_code = f"Error: Unable to generate script using Llama: {str(e)}"
             else:
                 script_code = "Error: Invalid code model selected."
 
