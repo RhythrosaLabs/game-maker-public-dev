@@ -305,7 +305,7 @@ with st.sidebar:
         options=['dall-e-3', 'SD Flux-1', 'SDXL Lightning'],
         index=0
     )
-    session_state.customization['code_model'] = st.selectbox(
+    st.session_state.customization['code_model'] = st.selectbox(
         "Select Code Generation Model",
         options=['gpt-4o', 'gpt-4o-mini', 'llama'],
         index=0
