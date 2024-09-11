@@ -84,6 +84,15 @@ def generate_content(prompt, role):
 
         except requests.RequestException as e:
             return f"Error: Unable to communicate with the OpenAI API: {str(e)}"
+    elif st.session_state.customization['chat_model'] == 'llama':
+        try:
+            output = replicate.run(
+                "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+                input={"prompt": f"You are a highly skilled assistant specializing in {role}. Provide detailed, creative, and well-structured responses optimized for game development.\n\nHuman: {prompt}\n\nAssistant:"}
+            )
+            return ''.join(output)
+        except Exception as e:
+            return f"Error: Unable to generate content using Llama: {str(e)}"
     else:
         return "Error: Invalid chat model selected."
 
@@ -109,6 +118,16 @@ def generate_image(prompt, size):
             return response_data["data"][0]["url"]
         except requests.RequestException as e:
             return f"Error: Unable to generate image: {str(e)}"
+    elif st.session_state.customization['image_model'] in ['SD Flux-1', 'SDXL Lightning']:
+        model_id = "stability-ai/sdxl:d830ba5dabf8090ec0db6c10fc862c6eb1c929e1a194a5411693fd46925ae592" if st.session_state.customization['image_model'] == 'SDXL Lightning' else "stability-ai/sd-flux:e6b3607df38c73b6d7aed272aed1b78b02b3a4254a89cea7dbc1b8a5c79ec12c"
+        try:
+            output = replicate.run(
+                model_id,
+                input={"prompt": prompt}
+            )
+            return output[0] if output else "Error: No image generated"
+        except Exception as e:
+            return f"Error: Unable to generate image using {st.session_state.customization['image_model']}: {str(e)}"
     else:
         return "Error: Invalid image model selected."
 
@@ -148,13 +167,13 @@ def generate_images(customization, game_concept):
     }
     
     sizes = {
-        'Character': (768, 1024),
-        'Enemy': (768, 1024),
-        'Background': (1024, 768),
+        'Character': (1024, 1024),
+        'Enemy': (1024, 1024),
+        'Background': (1024, 1024),
         'Object': (1024, 1024),
-        'Texture': (512, 512),
-        'Sprite': (1024, 768),
-        'UI': (1024, 768)
+        'Texture': (1024, 1024),
+        'Sprite': (1024, 1024),
+        'UI': (1024, 1024)
     }
 
     for img_type in customization['image_types']:
@@ -185,17 +204,22 @@ def generate_scripts(customization, game_concept):
 
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
-            desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
+            base_desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
             
             if selected_code_types['unity']:
-                desc += " Generate a Unity C# script."
-            if selected_code_types['unreal']:
-                desc += " Generate an Unreal C++ script."
-            if selected_code_types['blender']:
-                desc += " Generate a Blender Python script."
+                unity_desc = f"{base_desc} Generate a Unity C# script."
+                unity_script = generate_content(f"Create a comprehensive Unity C# script for {unity_desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
+                scripts[f"{script_type.lower()}_script_{i + 1}.cs"] = unity_script
 
-            script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
-            scripts[f"{script_type.lower()}_script_{i + 1}.py"] = script_code
+            if selected_code_types['unreal']:
+                unreal_desc = f"{base_desc} Generate an Unreal C++ script."
+                unreal_script = generate_content(f"Create a comprehensive Unreal C++ script for {unreal_desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
+                scripts[f"{script_type.lower()}_script_{i + 1}.cpp"] = unreal_script
+
+            if selected_code_types['blender']:
+                blender_desc = f"{base_desc} Generate a Blender Python script."
+                blender_script = generate_content(f"Create a comprehensive Blender Python script for {blender_desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
+                scripts[f"{script_type.lower()}_script_{i + 1}.py"] = blender_script
 
     return scripts
 
@@ -273,7 +297,7 @@ with st.sidebar:
     st.markdown("### AI Model Selection")
     st.session_state.customization['chat_model'] = st.selectbox(
         "Select Chat Model",
-        options=['gpt-4o', 'gpt-4o-mini'],
+        options=['gpt-4o', 'gpt-4o-mini', 'llama'],
         index=0
     )
     st.session_state.customization['image_model'] = st.selectbox(
@@ -281,9 +305,9 @@ with st.sidebar:
         options=['dall-e-3', 'SD Flux-1', 'SDXL Lightning'],
         index=0
     )
-    st.session_state.customization['code_model'] = st.selectbox(
+    session_state.customization['code_model'] = st.selectbox(
         "Select Code Generation Model",
-        options=['gpt-4o', 'gpt-4o-mini', 'CodeLlama-34B'],
+        options=['gpt-4o', 'gpt-4o-mini', 'llama'],
         index=0
     )
 
@@ -381,7 +405,7 @@ if st.button("Generate Game Plan", key="generate_button"):
             st.write("### Scripts")
             for script_name, script_code in game_plan['scripts'].items():
                 with st.expander(f"View {script_name}"):
-                    st.code(script_code, language='python')
+                    st.code(script_code, language=script_name.split('.')[-1])
 
         if 'additional_elements' in game_plan:
             st.subheader("Additional Game Elements")
