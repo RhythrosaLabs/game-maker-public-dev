@@ -11,7 +11,7 @@ import base64
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
 DALLE_API_URL = "https://api.openai.com/v1/images/generations"
-API_KEY_FILE = "api_key.json"
+API_KEY_FILE = "api_keys.json"
 
 # Initialize session state
 if 'api_keys' not in st.session_state:
@@ -37,8 +37,8 @@ if 'customization' not in st.session_state:
             'level_design': False
         },
         'image_model': 'dall-e-3',
-        'chat_model': 'gpt-4o-mini',
-        'code_model': 'gpt-4o-mini',
+        'chat_model': 'gpt-4',
+        'code_model': 'gpt-4',
     }
 
 # Load API keys from a file
@@ -63,7 +63,7 @@ def get_openai_headers():
 
 # Generate content using selected chat model
 def generate_content(prompt, role):
-    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4o-mini']:
+    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-3.5-turbo']:
         data = {
             "model": st.session_state.customization['chat_model'],
             "messages": [
@@ -85,9 +85,11 @@ def generate_content(prompt, role):
 
         except requests.RequestException as e:
             return f"Error: Unable to communicate with the OpenAI API: {str(e)}"
+    else:
+        return "Error: Invalid chat model selected."
 
 # Generate images using selected image model
-def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
+def generate_image(prompt, size):
     if st.session_state.customization['image_model'] == 'dall-e-3':
         data = {
             "model": "dall-e-3",
@@ -218,34 +220,10 @@ def generate_scripts(customization, game_concept):
             if selected_code_types['blender']:
                 desc += " Generate a Blender Python script."
 
-            if customization['code_model'] in ['gpt-4o', 'gpt-4o-mini']:
-                # Use OpenAI API for GPT-4 models
-                script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
-            else:
-                script_code = "Error: Invalid code model selected."
-
+            script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
             scripts[f"{script_type.lower()}_script_{i + 1}.py"] = script_code
 
     return scripts
-
-# Generate additional game elements
-def generate_additional_elements(game_concept, elements_to_generate):
-    additional_elements = {}
-    
-    if elements_to_generate.get('storyline'):
-        additional_elements['storyline'] = generate_content(f"Create a detailed storyline for the following game concept: {game_concept}. Include a compelling narrative arc, character development, and key plot points that tie into the gameplay mechanics.", "game narrative design")
-    
-    if elements_to_generate.get('dialogue'):
-        additional_elements['dialogue'] = generate_content(f"Write sample dialogue for key characters in the following game concept: {game_concept}. Include conversations that reveal character personalities, advance the plot, and provide gameplay hints.", "game dialogue writing")
-    
-    if elements_to_generate.get('game_mechanics'):
-        additional_elements['game_mechanics'] = generate_content(f"Describe detailed game mechanics for the following game concept: {game_concept}. Include core gameplay loops, progression systems, and unique features that set this game apart. Explain how these mechanics tie into the game's theme and story.", "game design")
-    
-    if elements_to_generate.get('level_design'):
-        additional_elements['level_design'] = generate_content(f"Create a detailed level design document for the following game concept: {game_concept}. Include a layout sketch, key areas, enemy placement, puzzle elements, and how the level progression ties into the overall game narrative.", "game level design")
-    
-    return additional_elements
-
 
 # Generate a complete game plan
 def generate_game_plan(user_prompt, customization):
@@ -259,25 +237,12 @@ def generate_game_plan(user_prompt, customization):
         status.text(message)
         progress_bar.progress(progress)
 
-    # Generate game concept
-    if customization['generate_elements']['game_concept']:
-        update_status("Generating game concept...", 0.1)
-        game_plan['game_concept'] = generate_content(f"Invent a new 2D game concept with a detailed theme, setting, and unique features based on the following prompt: {user_prompt}.", "game design")
-    
-    # Generate world concept
-    if customization['generate_elements']['world_concept']:
-        update_status("Creating world concept...", 0.2)
-        game_plan['world_concept'] = generate_content(f"Create a detailed world concept for the 2D game: {game_plan['game_concept']}.", "world building")
-    
-    # Generate character concepts
-    if customization['generate_elements']['character_concepts']:
-        update_status("Designing characters...", 0.3)
-        game_plan['character_concepts'] = generate_content(f"Create detailed character concepts for the player and enemies in the 2D game: {game_plan['game_concept']}.", "character design")
-    
-    # Generate plot
-    if customization['generate_elements']['plot']:
-        update_status("Crafting the plot...", 0.4)
-        game_plan['plot'] = generate_content(f"Create a plot for the 2D game.", "plot development")
+    # Generate game elements
+    elements_to_generate = customization['generate_elements']
+    for element, should_generate in elements_to_generate.items():
+        if should_generate:
+            update_status(f"Generating {element.replace('_', ' ')}...", 0.1)
+            game_plan[element] = generate_content(f"Create a detailed {element.replace('_', ' ')} for the following game concept: {user_prompt}", "game design")
     
     # Generate images
     if any(customization['image_count'].values()):
@@ -289,14 +254,10 @@ def generate_game_plan(user_prompt, customization):
         update_status("Writing game scripts...", 0.7)
         game_plan['scripts'] = generate_scripts(customization, game_plan.get('game_concept', ''))
     
-    # Generate additional elements
-    update_status("Creating additional game elements...", 0.8)
-    game_plan['additional_elements'] = generate_additional_elements(game_plan.get('game_concept', ''), customization['generate_elements'])
-    
     # Optional: Generate music
     if customization['use_replicate']['generate_music']:
         update_status("Composing background music...", 0.9)
-        music_prompt = f"Create background music for the game."
+        music_prompt = f"Create background music for the game: {game_plan.get('game_concept', '')}"
         game_plan['music'] = generate_music(music_prompt)
 
     update_status("Game plan generation complete!", 1.0)
@@ -316,63 +277,6 @@ def display_image(image_url, caption):
     except Exception as e:
         st.warning(f"Unable to display image: {caption}")
         st.error(f"Error: {str(e)}")
-
-# Help and FAQ function
-def show_help_and_faq():
-    st.markdown("## Help & FAQ")
-    
-    st.markdown("### How does this app work?")
-    st.write("""
-    1. You input your game concept and customize settings.
-    2. The app uses AI models to generate various game elements (concept, world, characters, plot, images, scripts, etc.).
-    3. All generated content is compiled into a downloadable ZIP file.
-    """)
-    
-    st.markdown("### What are the different AI models used?")
-    st.markdown("""
-    #### Chat Models:
-    - **GPT-4**: OpenAI's most advanced language model, capable of understanding and generating human-like text.
-    - **GPT-4o-mini**: A more lightweight version of GPT-4, optimized for faster responses.
-    - **Llama**: An open-source large language model developed by Meta AI.
-
-    #### Image Models:
-    - **DALL-E 3**: OpenAI's advanced text-to-image generation model.
-    - **SD Flux-1**: A stable diffusion model optimized for fast image generation.
-    - **SDXL Lightning**: A high-speed version of Stable Diffusion XL for rapid image creation.
-
-    #### Code Models:
-    - **GPT-4o**: OpenAI's GPT-4 model optimized for code generation.
-    - **GPT-4o-mini**: A lightweight version of GPT-4o for faster code generation.
-    - **CodeLlama-34B**: A large language model specifically trained for code generation tasks.
-    """)
-    
-    st.markdown("### What types of content can be generated?")
-    st.write("""
-    - Game concept
-    - World concept
-    - Character concepts
-    - Plot
-    - Images (characters, enemies, backgrounds, objects, textures, sprites, UI)
-    - Scripts (for Unity, Unreal Engine, or Blender)
-    - Additional elements like storyline, dialogue, game mechanics, and level design
-    - Background music
-    """)
-    
-    st.markdown("### How can I use the generated content?")
-    st.write("""
-    The generated content is meant to serve as a starting point or inspiration for your game development process. 
-    You can use it as a foundation to build upon, modify, or adapt as needed for your specific game project.
-    Always ensure you have the right to use AI-generated content in your jurisdiction and for your intended purpose.
-    """)
-    
-    st.markdown("### Are there any limitations?")
-    st.write("""
-    - The quality and relevance of the generated content depend on the input prompts and selected AI models.
-    - AI-generated content may require human review and refinement.
-    - The app requires valid API keys for OpenAI and Replicate to function properly.
-    - Large requests may take some time to process, depending on the selected options and server load.
-    """)
-
 
 # Streamlit app layout
 st.markdown('<p class="main-header">Game Dev Automation</p>', unsafe_allow_html=True)
@@ -395,17 +299,17 @@ with st.sidebar:
     st.markdown("### AI Model Selection")
     st.session_state.customization['chat_model'] = st.selectbox(
         "Select Chat Model",
-        options=['gpt-4', 'gpt-4o-mini', 'llama'],
+        options=['gpt-4', 'gpt-3.5-turbo'],
         index=0
     )
     st.session_state.customization['image_model'] = st.selectbox(
         "Select Image Generation Model",
-        options=['dall-e-3', 'SD Flux-1', 'SDXL Lightning'],
+        options=['dall-e-3'],
         index=0
     )
     st.session_state.customization['code_model'] = st.selectbox(
         "Select Code Generation Model",
-        options=['gpt-4o', 'gpt-4o-mini', 'CodeLlama-34B'],
+        options=['gpt-4', 'gpt-3.5-turbo'],
         index=0
     )
 
@@ -429,6 +333,8 @@ with tab2:
                 min_value=0, 
                 value=st.session_state.customization['image_count'][img_type]
             )
+        with col2:
+            st.session_state.customization['convert_to_3d'][img_type] = st.checkbox(f"Convert to 3D", value=st.session_state.customization['convert_to_3d'][img_type], key=f"3d_{img_type}")
 
 with tab3:
     st.markdown('<p class="section-header">Script Generation</p>', unsafe_allow_html=True)
@@ -582,10 +488,10 @@ if st.button("Generate Game Plan", key="generate_button"):
 # Footer
 st.markdown("---")
 st.markdown("""
-    Created by [Daniel Sheils](http://linkedin.com/in/danielsheils/) | 
-    [GitHub](https://github.com/RhythrosaLabs/game-maker) | 
-    [Twitter](https://twitter.com/rhythrosalabs) | 
-    [Instagram](https://instagram.com/rhythrosalabs)
+    Created by [Your Name/Company] | 
+    [GitHub](https://github.com/yourusername/game-dev-automation) | 
+    [Twitter](https://twitter.com/yourusername) | 
+    [Website](https://yourwebsite.com)
     """, unsafe_allow_html=True)
 
 # Initialize Replicate client
