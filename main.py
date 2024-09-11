@@ -104,7 +104,8 @@ def generate_content(prompt, role):
         return "Error: Invalid chat model selected."
 
 # Generate images using selected image model
-def generate_image(prompt, size):
+# Generate images using selected image model
+def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
     if st.session_state.customization['image_model'] == 'dall-e-3':
         data = {
             "model": "dall-e-3",
@@ -127,37 +128,45 @@ def generate_image(prompt, size):
             return f"Error: Unable to generate image: {str(e)}"
     elif st.session_state.customization['image_model'] == 'SD Flux-1':
         try:
+            # Convert size to aspect ratio
+            width, height = size
+            if width == height:
+                aspect_ratio = "1:1"
+            elif width > height:
+                aspect_ratio = "16:9" if width / height > 1.7 else "3:2"
+            else:
+                aspect_ratio = "9:16" if height / width > 1.7 else "2:3"
+
+            # Debug print statement to check API key
+            print(f"Debug: Replicate API key: {st.session_state.api_keys['replicate'][:5]}...")
+
+            # Initialize Replicate client with API key
             client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+
             output = client.run(
-                "stability-ai/sd-flux:e6b3607df38c73b6d7aed272aed1b78b02b3a4254a89cea7dbc1b8a5c79ec12c",
+                "black-forest-labs/flux-pro",
                 input={
                     "prompt": prompt,
-                    "width": size[0],
-                    "height": size[1],
-                    "num_outputs": 1,
-                    "guidance_scale": 7.5,
-                    "num_inference_steps": 50
+                    "aspect_ratio": aspect_ratio,
+                    "steps": steps,
+                    "guidance": guidance,
+                    "interval": interval,
+                    "safety_tolerance": 2,
+                    "output_format": "png",
+                    "output_quality": 100
                 }
             )
-            return output[0] if output else "Error: No image generated"
+            return output
         except Exception as e:
             return f"Error: Unable to generate image using SD Flux-1: {str(e)}"
     elif st.session_state.customization['image_model'] == 'SDXL Lightning':
         try:
             client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
             output = client.run(
-                "stability-ai/sdxl:d830ba5dabf8090ec0db6c10fc862c6eb1c929e1a194a5411693fd46925ae592",
-                input={
-                    "prompt": prompt,
-                    "width": size[0],
-                    "height": size[1],
-                    "num_outputs": 1,
-                    "guidance_scale": 7.5,
-                    "num_inference_steps": 4,
-                    "scheduler": "K_EULER"
-                }
+                "bytedance/sdxl-lightning-4step:5f24084160c9089501c1b3545d9be3c27883ae2239b6f412990e82d4a6210f8f",
+                input={"prompt": prompt}
             )
-            return output[0] if output else "Error: No image generated"
+            return output[0] if output else None
         except Exception as e:
             return f"Error: Unable to generate image using SDXL Lightning: {str(e)}"
     else:
