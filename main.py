@@ -7,6 +7,7 @@ from io import BytesIO
 from PIL import Image
 import replicate
 import base64 
+import re
 
 # Constants
 CHAT_API_URL = "https://api.openai.com/v1/chat/completions"
@@ -232,7 +233,7 @@ def generate_images(customization, game_concept):
     return images
 
 # Generate scripts based on customization settings and code types
-def generate_scripts(customization, game_concept):
+ef generate_scripts(customization, game_concept):
     script_descriptions = {
         'Player': "Create a comprehensive player character script for a 2D game. Include movement, input handling, and basic interactions.",
         'Enemy': "Develop a detailed enemy AI script for a 2D game. Include patrolling, player detection, and attack behaviors.",
@@ -257,6 +258,8 @@ def generate_scripts(customization, game_concept):
                     elif code_type == 'blender':
                         lang = 'python'
                         file_ext = '.py'
+                    else:
+                        continue  # Skip if it's an unknown code type
                     
                     desc = f"{script_descriptions[script_type]} The script should be for {code_type.capitalize()}. Generate ONLY the code, without any explanations or comments outside the code. Ensure the code is complete and can be directly used in a project."
 
