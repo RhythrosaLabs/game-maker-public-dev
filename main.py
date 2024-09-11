@@ -24,7 +24,6 @@ if 'customization' not in st.session_state:
         'image_count': {t: 0 for t in ['Character', 'Enemy', 'Background', 'Object', 'Texture', 'Sprite', 'UI']},
         'script_count': {t: 0 for t in ['Player', 'Enemy', 'Game Object', 'Level Background']},
         'use_replicate': {'generate_music': False},
-        'convert_to_3d': {t: False for t in ['Character', 'Enemy', 'Object', 'UI']},
         'code_types': {'unity': False, 'unreal': False, 'blender': False},
         'generate_elements': {
             'game_concept': True,
@@ -113,27 +112,6 @@ def generate_image(prompt, size):
     else:
         return "Error: Invalid image model selected."
 
-# Convert image to 3D model using Replicate API
-def convert_image_to_3d(image_url):
-    try:
-        output = replicate.run(
-            "adirik/wonder3d",
-            input={
-                "input_image": image_url
-            }
-        )
-        result = {'glb': None, 'obj': None}
-        for url in output:
-            if url.endswith('.glb'):
-                result['glb'] = url
-            elif url.endswith('.obj'):
-                result['obj'] = url
-        
-        return result if (result['glb'] or result['obj']) else None
-    except Exception as e:
-        st.error(f"Error during 3D conversion: {str(e)}")
-        return None
-
 # Generate music using Replicate's MusicGen
 def generate_music(prompt):
     try:
@@ -188,10 +166,6 @@ def generate_images(customization, game_concept):
             
             if image_url and not isinstance(image_url, str) and not image_url.startswith('Error'):
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
-                if customization['convert_to_3d'].get(img_type, False):
-                    model_url = convert_image_to_3d(image_url)
-                    if model_url and not model_url.startswith('Error'):
-                        images[f"{img_type.lower()}_3d_model_{i + 1}"] = model_url
             else:
                 images[f"{img_type.lower()}_image_{i + 1}"] = image_url
 
@@ -326,15 +300,11 @@ with tab2:
     st.markdown('<p class="info-text">Customize the types and number of images you want to generate for your game.</p>', unsafe_allow_html=True)
     
     for img_type in st.session_state.customization['image_types']:
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.session_state.customization['image_count'][img_type] = st.number_input(
-                f"Number of {img_type} Images", 
-                min_value=0, 
-                value=st.session_state.customization['image_count'][img_type]
-            )
-        with col2:
-            st.session_state.customization['convert_to_3d'][img_type] = st.checkbox(f"Convert to 3D", value=st.session_state.customization['convert_to_3d'][img_type], key=f"3d_{img_type}")
+        st.session_state.customization['image_count'][img_type] = st.number_input(
+            f"Number of {img_type} Images", 
+            min_value=0, 
+            value=st.session_state.customization['image_count'][img_type]
+        )
 
 with tab3:
     st.markdown('<p class="section-header">Script Generation</p>', unsafe_allow_html=True)
@@ -402,13 +372,7 @@ if st.button("Generate Game Plan", key="generate_button"):
             st.subheader("Generated Assets")
             st.write("### Images")
             for img_name, img_url in game_plan['images'].items():
-                if isinstance(img_url, dict):  # This is a 3D model
-                    st.write(f"{img_name}:")
-                    if img_url.get('glb'):
-                        st.write(f"[View 3D Model (GLB)]({img_url['glb']})")
-                    if img_url.get('obj'):
-                        st.write(f"[View 3D Model (OBJ)]({img_url['obj']})")
-                elif isinstance(img_url, str) and not img_url.startswith('Error'):
+                if isinstance(img_url, str) and not img_url.startswith('Error'):
                     display_image(img_url, img_name)
                 else:
                     st.write(f"{img_name}: {img_url}")
@@ -433,17 +397,10 @@ if st.button("Generate Game Plan", key="generate_button"):
                 if key in game_plan:
                     zip_file.writestr(f"{key}.txt", game_plan[key])
             
-            # Add images and 3D models
+            # Add images
             if 'images' in game_plan:
                 for asset_name, asset_url in game_plan['images'].items():
-                    if isinstance(asset_url, dict):  # This is a 3D model
-                        if asset_url.get('glb'):
-                            glb_response = requests.get(asset_url['glb'])
-                            zip_file.writestr(f"{asset_name}.glb", glb_response.content)
-                        if asset_url.get('obj'):
-                            obj_response = requests.get(asset_url['obj'])
-                            zip_file.writestr(f"{asset_name}.obj", obj_response.content)
-                    elif isinstance(asset_url, str) and asset_url.startswith('http'):
+                    if isinstance(asset_url, str) and asset_url.startswith('http'):
                         img_response = requests.get(asset_url)
                         img = Image.open(BytesIO(img_response.content))
                         img_file_name = f"{asset_name}.png"
