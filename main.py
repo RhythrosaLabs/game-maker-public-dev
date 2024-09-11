@@ -194,22 +194,36 @@ def generate_scripts(customization, game_concept):
 
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
-            base_desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
-            
+            desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
+
             if selected_code_types['unity']:
-                unity_desc = f"{base_desc} Generate a Unity C# script."
-                unity_script = generate_content(f"Create a comprehensive Unity C# script for {unity_desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
-                scripts[f"{script_type.lower()}_script_{i + 1}.cs"] = unity_script
-
+                desc += " Generate a Unity C# script."
             if selected_code_types['unreal']:
-                unreal_desc = f"{base_desc} Generate an Unreal C++ script."
-                unreal_script = generate_content(f"Create a comprehensive Unreal C++ script for {unreal_desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
-                scripts[f"{script_type.lower()}_script_{i + 1}.cpp"] = unreal_script
-
+                desc += " Generate an Unreal C++ script."
             if selected_code_types['blender']:
-                blender_desc = f"{base_desc} Generate a Blender Python script."
-                blender_script = generate_content(f"Create a comprehensive Blender Python script for {blender_desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
-                scripts[f"{script_type.lower()}_script_{i + 1}.py"] = blender_script
+                desc += " Generate a Blender Python script."
+
+            if code_model_type in ['gpt-4o', 'gpt-4o-mini']:
+                script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
+            elif code_model_type == 'CodeLlama-34B':
+                try:
+                    output = replicate.run(
+                        "meta/codellama-34b:b170b7f9660f9503a923f75a5c590e34e9dceda486e9ce5b2c2814d861632f8d",
+                        input={
+                            "prompt": f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.",
+                            "temperature": 0.7,
+                            "top_p": 0.95,
+                            "max_length": 1024,
+                            "repetition_penalty": 1.1
+                        }
+                    )
+                    script_code = ''.join(output)
+                except Exception as e:
+                    script_code = f"Error: Unable to generate script using CodeLlama-34B: {str(e)}"
+            else:
+                script_code = "Error: Invalid code model selected."
+
+            scripts[f"{script_type.lower()}_script_{i + 1}.py"] = script_code
 
     return scripts
 
