@@ -190,7 +190,7 @@ with tab3:
     col1, col2, col3 = st.columns(3)
     with col1:
         st.session_state.customization['code_types']['unity'] = st.checkbox("Unity C# Scripts", value=st.session_state.customization['code_types']['unity'], key="unity")
-        with col2:
+    with col2:
         st.session_state.customization['code_types']['unreal'] = st.checkbox("Unreal C++ Scripts", value=st.session_state.customization['code_types']['unreal'], key="unreal")
     with col3:
         st.session_state.customization['code_types']['blender'] = st.checkbox("Blender Python Scripts", value=st.session_state.customization['code_types']['blender'], key="blender")
