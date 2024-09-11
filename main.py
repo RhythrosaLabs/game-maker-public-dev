@@ -86,6 +86,115 @@ def generate_content(prompt, role):
         except requests.RequestException as e:
             return f"Error: Unable to communicate with the OpenAI API: {str(e)}"
 
+# Generate images using selected image model
+def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
+    if st.session_state.customization['image_model'] == 'dall-e-3':
+        data = {
+            "model": "dall-e-3",
+            "prompt": prompt,
+            "size": f"{size[0]}x{size[1]}",
+            "n": 1,
+            "response_format": "url"
+        }
+        try:
+            response = requests.post(DALLE_API_URL, headers=get_openai_headers(), json=data)
+            response.raise_for_status()
+            response_data = response.json()
+            if "data" not in response_data:
+                error_message = response_data.get("error", {}).get("message", "Unknown error")
+                return f"Error: {error_message}"
+            if not response_data["data"]:
+                return "Error: No data returned from API."
+            return response_data["data"][0]["url"]
+        except requests.RequestException as e:
+            return f"Error: Unable to generate image: {str(e)}"
+    else:
+        return "Error: Invalid image model selected."
+
+# Convert image to 3D model using Replicate API
+def convert_image_to_3d(image_url):
+    try:
+        output = replicate.run(
+            "adirik/wonder3d",
+            input={
+                "input_image": image_url
+            }
+        )
+        result = {'glb': None, 'obj': None}
+        for url in output:
+            if url.endswith('.glb'):
+                result['glb'] = url
+            elif url.endswith('.obj'):
+                result['obj'] = url
+        
+        return result if (result['glb'] or result['obj']) else None
+    except Exception as e:
+        st.error(f"Error during 3D conversion: {str(e)}")
+        return None
+
+# Generate music using Replicate's MusicGen
+def generate_music(prompt):
+    try:
+        client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+        output = client.run(
+            "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
+            input={
+                "prompt": prompt,
+                "model_version": "stereo-large",
+                "output_format": "mp3",
+                "normalization_strategy": "peak"
+            }
+        )
+        if isinstance(output, str) and output.startswith("http"):
+            return output
+        else:
+            return None
+    except Exception as e:
+        st.error(f"Error: Unable to generate music: {str(e)}")
+        return None
+
+# Generate multiple images based on customization settings
+def generate_images(customization, game_concept):
+    images = {}
+    
+    image_prompts = {
+        'Character': "Create a highly detailed, front-facing character concept art for a 2D game...",
+        'Enemy': "Design a menacing, front-facing enemy character concept art for a 2D game...",
+        'Background': "Create a wide, highly detailed background image for a level of the game...",
+        'Object': "Create a detailed object image for a 2D game...",
+        'Texture': "Generate a seamless texture pattern...",
+        'Sprite': "Create a game sprite sheet with multiple animation frames...",
+        'UI': "Design a cohesive set of user interface elements for a 2D game..."
+    }
+    
+    sizes = {
+        'Character': (768, 1024),
+        'Enemy': (768, 1024),
+        'Background': (1024, 768),
+        'Object': (1024, 1024),
+        'Texture': (512, 512),
+        'Sprite': (1024, 768),
+        'UI': (1024, 768)
+    }
+
+    for img_type in customization['image_types']:
+        for i in range(customization['image_count'].get(img_type, 0)):
+            prompt = f"{image_prompts[img_type]} The design should fit the following game concept: {game_concept}. Variation {i + 1}"
+            size = sizes[img_type]
+            
+            image_url = generate_image(prompt, size)
+            
+            if image_url and not isinstance(image_url, str) and not image_url.startswith('Error'):
+                images[f"{img_type.lower()}_image_{i + 1}"] = image_url
+                if customization['convert_to_3d'].get(img_type, False):
+                    model_url = convert_image_to_3d(image_url)
+                    if model_url and not model_url.startswith('Error'):
+                        images[f"{img_type.lower()}_3d_model_{i + 1}"] = model_url
+            else:
+                images[f"{img_type.lower()}_image_{i + 1}"] = image_url
+
+    return images
+
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
     script_descriptions = {
