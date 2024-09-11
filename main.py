@@ -234,10 +234,10 @@ def generate_images(customization, game_concept):
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
     script_descriptions = {
-        'Player': f"Create a comprehensive player character script for a 2D game...",
-        'Enemy': f"Develop a detailed enemy AI script for a 2D game...",
-        'Game Object': f"Script a versatile game object that can be used for various purposes...",
-        'Level Background': f"Create a script to manage the level background in a 2D game..."
+        'Player': "Create a comprehensive player character script for a 2D game. Include movement, input handling, and basic interactions.",
+        'Enemy': "Develop a detailed enemy AI script for a 2D game. Include patrolling, player detection, and attack behaviors.",
+        'Game Object': "Script a versatile game object that can be interacted with, collected, or activated by the player.",
+        'Level Background': "Create a script to manage the level background in a 2D game, including parallax scrolling if applicable."
     }
     
     scripts = {}
@@ -246,37 +246,48 @@ def generate_scripts(customization, game_concept):
 
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
-            desc = f"{script_descriptions[script_type]} - Instance {i + 1}"
+            for code_type, selected in selected_code_types.items():
+                if selected:
+                    if code_type == 'unity':
+                        lang = 'csharp'
+                        file_ext = '.cs'
+                    elif code_type == 'unreal':
+                        lang = 'cpp'
+                        file_ext = '.cpp'
+                    elif code_type == 'blender':
+                        lang = 'python'
+                        file_ext = '.py'
+                    
+                    desc = f"{script_descriptions[script_type]} The script should be for {code_type.capitalize()}. Generate ONLY the code, without any explanations or comments outside the code. Ensure the code is complete and can be directly used in a project."
 
-            if selected_code_types['unity']:
-                desc += " Generate a Unity C# script."
-            if selected_code_types['unreal']:
-                desc += " Generate an Unreal C++ script."
-            if selected_code_types['blender']:
-                desc += " Generate a Blender Python script."
+                    if code_model in ['gpt-4o', 'gpt-4o-mini']:
+                        script_code = generate_content(desc, "game development")
+                    elif code_model == 'llama':
+                        try:
+                            client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+                            output = client.run(
+                                "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+                                input={
+                                    "prompt": desc,
+                                    "temperature": 0.7,
+                                    "top_p": 0.95,
+                                    "max_length": 2048,
+                                    "repetition_penalty": 1.1
+                                }
+                            )
+                            script_code = ''.join(output)
+                        except Exception as e:
+                            script_code = f"Error: Unable to generate script using Llama: {str(e)}"
+                    else:
+                        script_code = "Error: Invalid code model selected."
 
-            if code_model in ['gpt-4o', 'gpt-4o-mini']:
-                script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
-            elif code_model == 'llama':
-                try:
-                    client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
-                    output = client.run(
-                        "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
-                        input={
-                            "prompt": f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.",
-                            "temperature": 0.7,
-                            "top_p": 0.95,
-                            "max_length": 1024,
-                            "repetition_penalty": 1.1
-                        }
-                    )
-                    script_code = ''.join(output)
-                except Exception as e:
-                    script_code = f"Error: Unable to generate script using Llama: {str(e)}"
-            else:
-                script_code = "Error: Invalid code model selected."
+                    # Clean up the generated code
+                    script_code = script_code.strip()
+                    script_code = re.sub(r'^```\w*\n|```$', '', script_code, flags=re.MULTILINE)  # Remove code block markers
+                    script_code = re.sub(r'^.*?Here\'s.*?:\n', '', script_code, flags=re.DOTALL)  # Remove introductory text
+                    script_code = re.sub(r'\n+//.+?$', '', script_code, flags=re.MULTILINE)  # Remove trailing comments
 
-            scripts[f"{script_type.lower()}_script_{i + 1}.py"] = script_code
+                    scripts[f"{script_type.lower()}_{code_type}_script_{i + 1}{file_ext}"] = script_code
 
     return scripts
 
