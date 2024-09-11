@@ -86,115 +86,6 @@ def generate_content(prompt, role):
         except requests.RequestException as e:
             return f"Error: Unable to communicate with the OpenAI API: {str(e)}"
 
-# Generate images using selected image model
-def generate_image(prompt, size, steps=25, guidance=3.0, interval=2.0):
-    if st.session_state.customization['image_model'] == 'dall-e-3':
-        data = {
-            "model": "dall-e-3",
-            "prompt": prompt,
-            "size": f"{size[0]}x{size[1]}",
-            "n": 1,
-            "response_format": "url"
-        }
-        try:
-            response = requests.post(DALLE_API_URL, headers=get_openai_headers(), json=data)
-            response.raise_for_status()
-            response_data = response.json()
-            if "data" not in response_data:
-                error_message = response_data.get("error", {}).get("message", "Unknown error")
-                return f"Error: {error_message}"
-            if not response_data["data"]:
-                return "Error: No data returned from API."
-            return response_data["data"][0]["url"]
-        except requests.RequestException as e:
-            return f"Error: Unable to generate image: {str(e)}"
-    else:
-        return "Error: Invalid image model selected."
-
-# Convert image to 3D model using Replicate API
-def convert_image_to_3d(image_url):
-    try:
-        output = replicate.run(
-            "adirik/wonder3d",
-            input={
-                "input_image": image_url
-            }
-        )
-        result = {'glb': None, 'obj': None}
-        for url in output:
-            if url.endswith('.glb'):
-                result['glb'] = url
-            elif url.endswith('.obj'):
-                result['obj'] = url
-        
-        return result if (result['glb'] or result['obj']) else None
-    except Exception as e:
-        st.error(f"Error during 3D conversion: {str(e)}")
-        return None
-
-# Generate music using Replicate's MusicGen
-def generate_music(prompt):
-    try:
-        client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
-        output = client.run(
-            "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
-            input={
-                "prompt": prompt,
-                "model_version": "stereo-large",
-                "output_format": "mp3",
-                "normalization_strategy": "peak"
-            }
-        )
-        if isinstance(output, str) and output.startswith("http"):
-            return output
-        else:
-            return None
-    except Exception as e:
-        st.error(f"Error: Unable to generate music: {str(e)}")
-        return None
-
-# Generate multiple images based on customization settings
-def generate_images(customization, game_concept):
-    images = {}
-    
-    image_prompts = {
-        'Character': "Create a highly detailed, front-facing character concept art for a 2D game...",
-        'Enemy': "Design a menacing, front-facing enemy character concept art for a 2D game...",
-        'Background': "Create a wide, highly detailed background image for a level of the game...",
-        'Object': "Create a detailed object image for a 2D game...",
-        'Texture': "Generate a seamless texture pattern...",
-        'Sprite': "Create a game sprite sheet with multiple animation frames...",
-        'UI': "Design a cohesive set of user interface elements for a 2D game..."
-    }
-    
-    sizes = {
-        'Character': (768, 1024),
-        'Enemy': (768, 1024),
-        'Background': (1024, 768),
-        'Object': (1024, 1024),
-        'Texture': (512, 512),
-        'Sprite': (1024, 768),
-        'UI': (1024, 768)
-    }
-
-    for img_type in customization['image_types']:
-        for i in range(customization['image_count'].get(img_type, 0)):
-            prompt = f"{image_prompts[img_type]} The design should fit the following game concept: {game_concept}. Variation {i + 1}"
-            size = sizes[img_type]
-            
-            image_url = generate_image(prompt, size)
-            
-            if image_url and not isinstance(image_url, str) and not image_url.startswith('Error'):
-                images[f"{img_type.lower()}_image_{i + 1}"] = image_url
-                if customization['convert_to_3d'].get(img_type, False):
-                    model_url = convert_image_to_3d(image_url)
-                    if model_url and not model_url.startswith('Error'):
-                        images[f"{img_type.lower()}_3d_model_{i + 1}"] = model_url
-            else:
-                images[f"{img_type.lower()}_image_{i + 1}"] = image_url
-
-    return images
-
 # Generate scripts based on customization settings and code types
 def generate_scripts(customization, game_concept):
     script_descriptions = {
@@ -227,132 +118,6 @@ def generate_scripts(customization, game_concept):
             scripts[f"{script_type.lower()}_script_{i + 1}.py"] = script_code
 
     return scripts
-
-# Generate a complete game plan
-def generate_game_plan(user_prompt, customization):
-    game_plan = {}
-    
-    # Status updates
-    status = st.empty()
-    progress_bar = st.progress(0)
-    
-    def update_status(message, progress):
-        status.text(message)
-        progress_bar.progress(progress)
-
-    # Generate game concept
-    if customization['generate_elements']['game_concept']:
-        update_status("Generating game concept...", 0.1)
-        game_plan['game_concept'] = generate_content(f"Invent a new 2D game concept with a detailed theme, setting, and unique features based on the following prompt: {user_prompt}.", "game design")
-    
-    # Generate world concept
-    if customization['generate_elements']['world_concept']:
-        update_status("Creating world concept...", 0.2)
-        game_plan['world_concept'] = generate_content(f"Create a detailed world concept for the 2D game: {game_plan['game_concept']}.", "world building")
-    
-    # Generate character concepts
-    if customization['generate_elements']['character_concepts']:
-        update_status("Designing characters...", 0.3)
-        game_plan['character_concepts'] = generate_content(f"Create detailed character concepts for the player and enemies in the 2D game: {game_plan['game_concept']}.", "character design")
-    
-    # Generate plot
-    if customization['generate_elements']['plot']:
-        update_status("Crafting the plot...", 0.4)
-        game_plan['plot'] = generate_content(f"Create a plot for the 2D game.", "plot development")
-    
-    # Generate images
-    if any(customization['image_count'].values()):
-        update_status("Generating game images...", 0.5)
-        game_plan['images'] = generate_images(customization, game_plan.get('game_concept', ''))
-    
-    # Generate scripts
-    if any(customization['script_count'].values()):
-        update_status("Writing game scripts...", 0.7)
-        game_plan['scripts'] = generate_scripts(customization, game_plan.get('game_concept', ''))
-    
-    # Generate additional elements
-    update_status("Creating additional game elements...", 0.8)
-    game_plan['additional_elements'] = generate_additional_elements(game_plan.get('game_concept', ''), customization['generate_elements'])
-    
-    # Optional: Generate music
-    if customization['use_replicate']['generate_music']:
-        update_status("Composing background music...", 0.9)
-        music_prompt = f"Create background music for the game."
-        game_plan['music'] = generate_music(music_prompt)
-
-    update_status("Game plan generation complete!", 1.0)
-
-    return game_plan
-
-# Function to display images
-def display_image(image_url, caption):
-    try:
-        response = requests.get(image_url)
-        response.raise_for_status()  # Raise an exception for bad responses
-        image = Image.open(BytesIO(response.content))
-        st.image(image, caption=caption, use_column_width=True)
-    except requests.RequestException as e:
-        st.warning(f"Unable to load image: {caption}")
-        st.error(f"Error: {str(e)}")
-    except Exception as e:
-        st.warning(f"Unable to display image: {caption}")
-        st.error(f"Error: {str(e)}")
-
-# Help and FAQ function
-def show_help_and_faq():
-    st.markdown("## Help & FAQ")
-    
-    st.markdown("### How does this app work?")
-    st.write("""
-    1. You input your game concept and customize settings.
-    2. The app uses AI models to generate various game elements (concept, world, characters, plot, images, scripts, etc.).
-    3. All generated content is compiled into a downloadable ZIP file.
-    """)
-    
-    st.markdown("### What are the different AI models used?")
-    st.markdown("""
-    #### Chat Models:
-    - **GPT-4**: OpenAI's most advanced language model, capable of understanding and generating human-like text.
-    - **GPT-4o-mini**: A more lightweight version of GPT-4, optimized for faster responses.
-    - **Llama**: An open-source large language model developed by Meta AI.
-
-    #### Image Models:
-    - **DALL-E 3**: OpenAI's advanced text-to-image generation model.
-    - **SD Flux-1**: A stable diffusion model optimized for fast image generation.
-    - **SDXL Lightning**: A high-speed version of Stable Diffusion XL for rapid image creation.
-
-    #### Code Models:
-    - **GPT-4o**: OpenAI's GPT-4 model optimized for code generation.
-    - **GPT-4o-mini**: A lightweight version of GPT-4o for faster code generation.
-    - **CodeLlama-34B**: A large language model specifically trained for code generation tasks.
-    """)
-    
-    st.markdown("### What types of content can be generated?")
-    st.write("""
-    - Game concept
-    - World concept
-    - Character concepts
-    - Plot
-    - Images (characters, enemies, backgrounds, objects, textures, sprites, UI)
-    - Scripts (for Unity, Unreal Engine, or Blender)
-    - Additional elements like storyline, dialogue, game mechanics, and level design
-    - Background music
-    """)
-    
-    st.markdown("### How can I use the generated content?")
-    st.write("""
-    The generated content is meant to serve as a starting point or inspiration for your game development process. 
-    You can use it as a foundation to build upon, modify, or adapt as needed for your specific game project.
-    Always ensure you have the right to use AI-generated content in your jurisdiction and for your intended purpose.
-    """)
-    
-    st.markdown("### Are there any limitations?")
-    st.write("""
-    - The quality and relevance of the generated content depend on the input prompts and selected AI models.
-    - AI-generated content may require human review and refinement.
-    - The app requires valid API keys for OpenAI and Replicate to function properly.
-    - Large requests may take some time to process, depending on the selected options and server load.
-    """)
 
 # Streamlit app layout
 st.markdown('<p class="main-header">Game Dev Automation</p>', unsafe_allow_html=True)
@@ -389,16 +154,6 @@ with st.sidebar:
         index=0
     )
 
-    # Code Type Selection
-    st.markdown("### Code Type Selection")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.session_state.customization['code_types']['unity'] = st.checkbox("Unity C# Scripts", value=st.session_state.customization['code_types']['unity'])
-    with col2:
-        st.session_state.customization['code_types']['unreal'] = st.checkbox("Unreal C++ Scripts", value=st.session_state.customization['code_types']['unreal'])
-    with col3:
-        st.session_state.customization['code_types']['blender'] = st.checkbox("Blender Python Scripts", value=st.session_state.customization['code_types']['blender'])
-
 # Main content area
 tab1, tab2, tab3, tab4 = st.tabs(["Game Concept", "Image Generation", "Script Generation", "Additional Elements"])
 
@@ -419,7 +174,7 @@ with tab2:
                 min_value=0, 
                 value=st.session_state.customization['image_count'][img_type]
             )
-        
+
 with tab3:
     st.markdown('<p class="section-header">Script Generation</p>', unsafe_allow_html=True)
     st.markdown('<p class="info-text">Specify the types and number of scripts you need for your game.</p>', unsafe_allow_html=True)
@@ -430,6 +185,15 @@ with tab3:
             min_value=0, 
             value=st.session_state.customization['script_count'][script_type]
         )
+
+    st.markdown("### Code Type Selection")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.session_state.customization['code_types']['unity'] = st.checkbox("Unity C# Scripts", value=st.session_state.customization['code_types']['unity'], key="unity")
+        with col2:
+        st.session_state.customization['code_types']['unreal'] = st.checkbox("Unreal C++ Scripts", value=st.session_state.customization['code_types']['unreal'], key="unreal")
+    with col3:
+        st.session_state.customization['code_types']['blender'] = st.checkbox("Blender Python Scripts", value=st.session_state.customization['code_types']['blender'], key="blender")
 
 with tab4:
     st.markdown('<p class="section-header">Additional Game Elements</p>', unsafe_allow_html=True)
