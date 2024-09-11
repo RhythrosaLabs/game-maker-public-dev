@@ -541,10 +541,10 @@ if st.button("Generate Game Plan", key="generate_button"):
 # Footer
 st.markdown("---")
 st.markdown("""
-    Created by [Your Name/Company] | 
-    [GitHub](https://github.com/yourusername/game-dev-automation) | 
-    [Twitter](https://twitter.com/yourusername) | 
-    [Website](https://yourwebsite.com)
+    Created by [Daniel Sheils](http://linkedin.com/in/danielsheils/) | 
+    [GitHub](https://github.com/RhythrosaLabs/game-maker) | 
+    [Twitter](https://twitter.com/rhythrosalabs) | 
+    [Instagram](https://instagram.com/rhythrosalabs)
     """, unsafe_allow_html=True)
 
 # Initialize Replicate client
