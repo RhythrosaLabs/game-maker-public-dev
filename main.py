@@ -233,7 +233,7 @@ def generate_images(customization, game_concept):
     return images
 
 # Generate scripts based on customization settings and code types
-ef generate_scripts(customization, game_concept):
+def generate_scripts(customization, game_concept):
     script_descriptions = {
         'Player': "Create a comprehensive player character script for a 2D game. Include movement, input handling, and basic interactions.",
         'Enemy': "Develop a detailed enemy AI script for a 2D game. Include patrolling, player detection, and attack behaviors.",
