@@ -62,7 +62,7 @@ def get_openai_headers():
 
 # Generate content using selected chat model
 def generate_content(prompt, role):
-    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-3.5-turbo']:
+    if st.session_state.customization['chat_model'] in ['gpt-4o', 'gpt-4o-mini']:
         data = {
             "model": st.session_state.customization['chat_model'],
             "messages": [
@@ -273,7 +273,7 @@ with st.sidebar:
     st.markdown("### AI Model Selection")
     st.session_state.customization['chat_model'] = st.selectbox(
         "Select Chat Model",
-        options=['gpt-4', 'gpt-3.5-turbo'],
+        options=['gpt-4o', 'gpt-4o-mini'],
         index=0
     )
     st.session_state.customization['image_model'] = st.selectbox(
@@ -283,7 +283,7 @@ with st.sidebar:
     )
     st.session_state.customization['code_model'] = st.selectbox(
         "Select Code Generation Model",
-        options=['gpt-4', 'gpt-3.5-turbo'],
+        options=['gpt-4o', 'gpt-4o-mini'],
         index=0
     )
 
