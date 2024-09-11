@@ -36,8 +36,8 @@ if 'customization' not in st.session_state:
             'level_design': False
         },
         'image_model': 'dall-e-3',
-        'chat_model': 'gpt-4',
-        'code_model': 'gpt-4',
+        'chat_model': 'gpt-4o',
+        'code_model': 'gpt-4o',
     }
 
 # Load API keys from a file
@@ -278,12 +278,12 @@ with st.sidebar:
     )
     st.session_state.customization['image_model'] = st.selectbox(
         "Select Image Generation Model",
-        options=['dall-e-3'],
+        options=['dall-e-3', 'SD Flux-1', 'SDXL Lightning'],
         index=0
     )
     st.session_state.customization['code_model'] = st.selectbox(
         "Select Code Generation Model",
-        options=['gpt-4o', 'gpt-4o-mini'],
+        options=['gpt-4o', 'gpt-4o-mini', 'CodeLlama-34B'],
         index=0
     )
 
