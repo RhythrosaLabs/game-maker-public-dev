@@ -389,16 +389,6 @@ with st.sidebar:
         index=0
     )
 
-    # Code Type Selection
-    st.markdown("### Code Type Selection")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.session_state.customization['code_types']['unity'] = st.checkbox("Unity C# Scripts", value=st.session_state.customization['code_types']['unity'])
-    with col2:
-        st.session_state.customization['code_types']['unreal'] = st.checkbox("Unreal C++ Scripts", value=st.session_state.customization['code_types']['unreal'])
-    with col3:
-        st.session_state.customization['code_types']['blender'] = st.checkbox("Blender Python Scripts", value=st.session_state.customization['code_types']['blender'])
-
 # Main content area
 tab1, tab2, tab3, tab4 = st.tabs(["Game Concept", "Image Generation", "Script Generation", "Additional Elements"])
 
