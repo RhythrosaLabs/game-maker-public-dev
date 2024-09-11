@@ -228,6 +228,25 @@ def generate_scripts(customization, game_concept):
 
     return scripts
 
+# Generate additional game elements
+def generate_additional_elements(game_concept, elements_to_generate):
+    additional_elements = {}
+    
+    if elements_to_generate.get('storyline'):
+        additional_elements['storyline'] = generate_content(f"Create a detailed storyline for the following game concept: {game_concept}. Include a compelling narrative arc, character development, and key plot points that tie into the gameplay mechanics.", "game narrative design")
+    
+    if elements_to_generate.get('dialogue'):
+        additional_elements['dialogue'] = generate_content(f"Write sample dialogue for key characters in the following game concept: {game_concept}. Include conversations that reveal character personalities, advance the plot, and provide gameplay hints.", "game dialogue writing")
+    
+    if elements_to_generate.get('game_mechanics'):
+        additional_elements['game_mechanics'] = generate_content(f"Describe detailed game mechanics for the following game concept: {game_concept}. Include core gameplay loops, progression systems, and unique features that set this game apart. Explain how these mechanics tie into the game's theme and story.", "game design")
+    
+    if elements_to_generate.get('level_design'):
+        additional_elements['level_design'] = generate_content(f"Create a detailed level design document for the following game concept: {game_concept}. Include a layout sketch, key areas, enemy placement, puzzle elements, and how the level progression ties into the overall game narrative.", "game level design")
+    
+    return additional_elements
+
+
 # Generate a complete game plan
 def generate_game_plan(user_prompt, customization):
     game_plan = {}
