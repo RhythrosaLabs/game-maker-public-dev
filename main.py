@@ -104,9 +104,28 @@ def generate_content(prompt, role):
         return "Error: Invalid chat model selected."
 
 # Generate images using selected image model
+# Generate images using selected image model
 def generate_image(prompt, size):
     if st.session_state.customization['image_model'] == 'dall-e-3':
-        # ... (existing DALL-E 3 code remains the same)
+        data = {
+            "model": "dall-e-3",
+            "prompt": prompt,
+            "size": f"{size[0]}x{size[1]}",
+            "n": 1,
+            "response_format": "url"
+        }
+        try:
+            response = requests.post(DALLE_API_URL, headers=get_openai_headers(), json=data)
+            response.raise_for_status()
+            response_data = response.json()
+            if "data" not in response_data:
+                error_message = response_data.get("error", {}).get("message", "Unknown error")
+                return f"Error: {error_message}"
+            if not response_data["data"]:
+                return "Error: No data returned from API."
+            return response_data["data"][0]["url"]
+        except requests.RequestException as e:
+            return f"Error: Unable to generate image: {str(e)}"
     elif st.session_state.customization['image_model'] == 'SD Flux-1':
         try:
             output = replicate.run(
