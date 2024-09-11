@@ -228,6 +228,62 @@ def generate_scripts(customization, game_concept):
 
     return scripts
 
+# Generate a complete game plan
+def generate_game_plan(user_prompt, customization):
+    game_plan = {}
+    
+    # Status updates
+    status = st.empty()
+    progress_bar = st.progress(0)
+    
+    def update_status(message, progress):
+        status.text(message)
+        progress_bar.progress(progress)
+
+    # Generate game concept
+    if customization['generate_elements']['game_concept']:
+        update_status("Generating game concept...", 0.1)
+        game_plan['game_concept'] = generate_content(f"Invent a new 2D game concept with a detailed theme, setting, and unique features based on the following prompt: {user_prompt}.", "game design")
+    
+    # Generate world concept
+    if customization['generate_elements']['world_concept']:
+        update_status("Creating world concept...", 0.2)
+        game_plan['world_concept'] = generate_content(f"Create a detailed world concept for the 2D game: {game_plan['game_concept']}.", "world building")
+    
+    # Generate character concepts
+    if customization['generate_elements']['character_concepts']:
+        update_status("Designing characters...", 0.3)
+        game_plan['character_concepts'] = generate_content(f"Create detailed character concepts for the player and enemies in the 2D game: {game_plan['game_concept']}.", "character design")
+    
+    # Generate plot
+    if customization['generate_elements']['plot']:
+        update_status("Crafting the plot...", 0.4)
+        game_plan['plot'] = generate_content(f"Create a plot for the 2D game.", "plot development")
+    
+    # Generate images
+    if any(customization['image_count'].values()):
+        update_status("Generating game images...", 0.5)
+        game_plan['images'] = generate_images(customization, game_plan.get('game_concept', ''))
+    
+    # Generate scripts
+    if any(customization['script_count'].values()):
+        update_status("Writing game scripts...", 0.7)
+        game_plan['scripts'] = generate_scripts(customization, game_plan.get('game_concept', ''))
+    
+    # Generate additional elements
+    update_status("Creating additional game elements...", 0.8)
+    game_plan['additional_elements'] = generate_additional_elements(game_plan.get('game_concept', ''), customization['generate_elements'])
+    
+    # Optional: Generate music
+    if customization['use_replicate']['generate_music']:
+        update_status("Composing background music...", 0.9)
+        music_prompt = f"Create background music for the game."
+        game_plan['music'] = generate_music(music_prompt)
+
+    update_status("Game plan generation complete!", 1.0)
+
+    return game_plan
+
 # Streamlit app layout
 st.markdown('<p class="main-header">Game Dev Automation</p>', unsafe_allow_html=True)
 
