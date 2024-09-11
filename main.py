@@ -64,7 +64,7 @@ def get_openai_headers():
 def generate_content(prompt, role):
     if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4o-mini']:
         # ... (existing OpenAI code remains the same)
-    elif st.session_state.customization['chat_model'] == 'llama':
+    if st.session_state.customization['chat_model'] == 'llama':
         try:
             output = replicate.run(
                 "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
