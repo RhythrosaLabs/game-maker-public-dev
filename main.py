@@ -61,7 +61,6 @@ def get_openai_headers():
     }
 
 # Generate content using selected chat model
-# Generate content using selected chat model
 def generate_content(prompt, role):
     if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4o-mini']:
         data = {
@@ -87,7 +86,8 @@ def generate_content(prompt, role):
             return f"Error: Unable to communicate with the OpenAI API: {str(e)}"
     elif st.session_state.customization['chat_model'] == 'llama':
         try:
-            output = replicate.run(
+            client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+            output = client.run(
                 "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
                 input={
                     "prompt": f"You are a highly skilled assistant specializing in {role}. Provide detailed, creative, and well-structured responses optimized for game development.\n\nHuman: {prompt}\n\nAssistant:",
@@ -103,7 +103,6 @@ def generate_content(prompt, role):
     else:
         return "Error: Invalid chat model selected."
 
-# Generate images using selected image model
 # Generate images using selected image model
 def generate_image(prompt, size):
     if st.session_state.customization['image_model'] == 'dall-e-3':
@@ -128,7 +127,8 @@ def generate_image(prompt, size):
             return f"Error: Unable to generate image: {str(e)}"
     elif st.session_state.customization['image_model'] == 'SD Flux-1':
         try:
-            output = replicate.run(
+            client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+            output = client.run(
                 "stability-ai/sd-flux:e6b3607df38c73b6d7aed272aed1b78b02b3a4254a89cea7dbc1b8a5c79ec12c",
                 input={
                     "prompt": prompt,
@@ -144,7 +144,8 @@ def generate_image(prompt, size):
             return f"Error: Unable to generate image using SD Flux-1: {str(e)}"
     elif st.session_state.customization['image_model'] == 'SDXL Lightning':
         try:
-            output = replicate.run(
+            client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+            output = client.run(
                 "stability-ai/sdxl:d830ba5dabf8090ec0db6c10fc862c6eb1c929e1a194a5411693fd46925ae592",
                 input={
                     "prompt": prompt,
@@ -152,7 +153,7 @@ def generate_image(prompt, size):
                     "height": size[1],
                     "num_outputs": 1,
                     "guidance_scale": 7.5,
-                    "num_inference_steps": 25,
+                    "num_inference_steps": 4,
                     "scheduler": "K_EULER"
                 }
             )
@@ -161,6 +162,7 @@ def generate_image(prompt, size):
             return f"Error: Unable to generate image using SDXL Lightning: {str(e)}"
     else:
         return "Error: Invalid image model selected."
+
 # Generate music using Replicate's MusicGen
 def generate_music(prompt):
     try:
@@ -231,7 +233,7 @@ def generate_scripts(customization, game_concept):
     
     scripts = {}
     selected_code_types = customization['code_types']
-    code_model = customization['code_model']  # Use the correct key from customization
+    code_model = customization['code_model']
 
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
@@ -246,9 +248,10 @@ def generate_scripts(customization, game_concept):
 
             if code_model in ['gpt-4o', 'gpt-4o-mini']:
                 script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
-            elif code_model == 'llama':  # Changed from 'CodeLlama-34B' to 'llama' to match your model options
+            elif code_model == 'llama':
                 try:
-                    output = replicate.run(
+                    client = replicate.Client(api_token=st.session_state.api_keys['replicate'])
+                    output = client.run(
                         "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
                         input={
                             "prompt": f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.",
