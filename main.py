@@ -61,10 +61,31 @@ def get_openai_headers():
     }
 
 # Generate content using selected chat model
+# Generate content using selected chat model
 def generate_content(prompt, role):
     if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4o-mini']:
-        # ... (existing OpenAI code remains the same)
-    if st.session_state.customization['chat_model'] == 'llama':
+        data = {
+            "model": st.session_state.customization['chat_model'],
+            "messages": [
+                {"role": "system", "content": f"You are a highly skilled assistant specializing in {role}. Provide detailed, creative, and well-structured responses optimized for game development."},
+                {"role": "user", "content": prompt}
+            ]
+        }
+
+        try:
+            response = requests.post(CHAT_API_URL, headers=get_openai_headers(), json=data)
+            response.raise_for_status()
+            response_data = response.json()
+            if "choices" not in response_data:
+                error_message = response_data.get("error", {}).get("message", "Unknown error")
+                return f"Error: {error_message}"
+
+            content_text = response_data["choices"][0]["message"]["content"]
+            return content_text
+
+        except requests.RequestException as e:
+            return f"Error: Unable to communicate with the OpenAI API: {str(e)}"
+    elif st.session_state.customization['chat_model'] == 'llama':
         try:
             output = replicate.run(
                 "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
