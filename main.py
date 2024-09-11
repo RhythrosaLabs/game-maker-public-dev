@@ -63,9 +63,11 @@ def get_openai_headers():
 # Generate content using selected chat model
 # Generate content using selected chat model
 def generate_content(prompt, role):
-    if st.session_state.customization['chat_model'] in ['gpt-4', 'gpt-4o-mini']:
+    model = st.session_state.customization['chat_model']
+    
+    if model in ['gpt-4o', 'gpt-4o-mini']:
         data = {
-            "model": st.session_state.customization['chat_model'],
+            "model": model,
             "messages": [
                 {"role": "system", "content": f"You are a highly skilled assistant specializing in {role}. Provide detailed, creative, and well-structured responses optimized for game development."},
                 {"role": "user", "content": prompt}
@@ -85,7 +87,7 @@ def generate_content(prompt, role):
 
         except requests.RequestException as e:
             return f"Error: Unable to communicate with the OpenAI API: {str(e)}"
-    elif st.session_state.customization['chat_model'] == 'llama':
+    elif model == 'llama':
         try:
             output = replicate.run(
                 "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
@@ -101,8 +103,7 @@ def generate_content(prompt, role):
         except Exception as e:
             return f"Error: Unable to generate content using Llama: {str(e)}"
     else:
-        return "Error: Invalid chat model selected."
-
+        return f"Error: Invalid chat model selected: {model}"
 # Generate images using selected image model
 # Generate images using selected image model
 def generate_image(prompt, size):
@@ -231,7 +232,7 @@ def generate_scripts(customization, game_concept):
     
     scripts = {}
     selected_code_types = customization['code_types']
-    code_model = customization['code_model']  # Use the correct key from customization
+    code_model = customization['code_model']
 
     for script_type in customization['script_types']:
         for i in range(customization['script_count'].get(script_type, 0)):
@@ -244,30 +245,10 @@ def generate_scripts(customization, game_concept):
             if selected_code_types['blender']:
                 desc += " Generate a Blender Python script."
 
-            if code_model in ['gpt-4o', 'gpt-4o-mini']:
-                script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
-            elif code_model == 'llama':  # Changed from 'CodeLlama-34B' to 'llama' to match your model options
-                try:
-                    output = replicate.run(
-                        "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
-                        input={
-                            "prompt": f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.",
-                            "temperature": 0.7,
-                            "top_p": 0.95,
-                            "max_length": 1024,
-                            "repetition_penalty": 1.1
-                        }
-                    )
-                    script_code = ''.join(output)
-                except Exception as e:
-                    script_code = f"Error: Unable to generate script using Llama: {str(e)}"
-            else:
-                script_code = "Error: Invalid code model selected."
-
+            script_code = generate_content(f"Create a comprehensive script for {desc}. Include detailed comments, error handling, and optimize for performance.", "game development")
             scripts[f"{script_type.lower()}_script_{i + 1}.py"] = script_code
 
     return scripts
-
 # Generate a complete game plan
 def generate_game_plan(user_prompt, customization):
     game_plan = {}
