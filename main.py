@@ -284,6 +284,77 @@ def generate_game_plan(user_prompt, customization):
 
     return game_plan
 
+# Function to display images
+def display_image(image_url, caption):
+    try:
+        response = requests.get(image_url)
+        response.raise_for_status()  # Raise an exception for bad responses
+        image = Image.open(BytesIO(response.content))
+        st.image(image, caption=caption, use_column_width=True)
+    except requests.RequestException as e:
+        st.warning(f"Unable to load image: {caption}")
+        st.error(f"Error: {str(e)}")
+    except Exception as e:
+        st.warning(f"Unable to display image: {caption}")
+        st.error(f"Error: {str(e)}")
+
+# Help and FAQ function
+def show_help_and_faq():
+    st.markdown("## Help & FAQ")
+    
+    st.markdown("### How does this app work?")
+    st.write("""
+    1. You input your game concept and customize settings.
+    2. The app uses AI models to generate various game elements (concept, world, characters, plot, images, scripts, etc.).
+    3. All generated content is compiled into a downloadable ZIP file.
+    """)
+    
+    st.markdown("### What are the different AI models used?")
+    st.markdown("""
+    #### Chat Models:
+    - **GPT-4**: OpenAI's most advanced language model, capable of understanding and generating human-like text.
+    - **GPT-4o-mini**: A more lightweight version of GPT-4, optimized for faster responses.
+    - **Llama**: An open-source large language model developed by Meta AI.
+
+    #### Image Models:
+    - **DALL-E 3**: OpenAI's advanced text-to-image generation model.
+    - **SD Flux-1**: A stable diffusion model optimized for fast image generation.
+    - **SDXL Lightning**: A high-speed version of Stable Diffusion XL for rapid image creation.
+
+    #### Code Models:
+    - **GPT-4o**: OpenAI's GPT-4 model optimized for code generation.
+    - **GPT-4o-mini**: A lightweight version of GPT-4o for faster code generation.
+    - **CodeLlama-34B**: A large language model specifically trained for code generation tasks.
+    """)
+    
+    st.markdown("### What types of content can be generated?")
+    st.write("""
+    - Game concept
+    - World concept
+    - Character concepts
+    - Plot
+    - Images (characters, enemies, backgrounds, objects, textures, sprites, UI)
+    - Scripts (for Unity, Unreal Engine, or Blender)
+    - Additional elements like storyline, dialogue, game mechanics, and level design
+    - Background music
+    """)
+    
+    st.markdown("### How can I use the generated content?")
+    st.write("""
+    The generated content is meant to serve as a starting point or inspiration for your game development process. 
+    You can use it as a foundation to build upon, modify, or adapt as needed for your specific game project.
+    Always ensure you have the right to use AI-generated content in your jurisdiction and for your intended purpose.
+    """)
+    
+    st.markdown("### Are there any limitations?")
+    st.write("""
+    - The quality and relevance of the generated content depend on the input prompts and selected AI models.
+    - AI-generated content may require human review and refinement.
+    - The app requires valid API keys for OpenAI and Replicate to function properly.
+    - Large requests may take some time to process, depending on the selected options and server load.
+    """)
+
+
 # Streamlit app layout
 st.markdown('<p class="main-header">Game Dev Automation</p>', unsafe_allow_html=True)
 
