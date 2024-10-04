@@ -1,6 +1,6 @@
-# Game Dev Automation
+# Game Maker
 
-Game Dev Automation is a Streamlit app that uses AI to accelerate game development by generating concepts, assets, scripts, and more.
+Game Maker is a Streamlit app that uses AI to accelerate game development by generating concepts, assets, scripts, and more.
 
 ## 🚀 Features
 
