@@ -1,39 +1,69 @@
-# Game Maker
+<div align="center">
 
-Game Maker is a Streamlit app that uses AI to accelerate game development by generating concepts, assets, scripts, and more.
+# 🎮 Game Maker (Public Dev)
 
-## 🚀 Features
+**AI-powered game asset generator — concepts, art, scripts, 3D models, and music in one zip**
 
-- **Game Concept Generation**: Create detailed game concepts, world designs, and character ideas.
-- **Asset Creation**: Generate game assets (characters, enemies, backgrounds, objects, textures, sprites, UI).
-- **Script Generation**: Create scripts for player characters, enemies, game objects, and level backgrounds.
-- **Multiple AI Models**: Use various AI models for chat, image generation, and code creation.
-- **3D Model Conversion**: Convert 2D images to 3D models for certain asset types.
-- **Music Generation**: Create background music fitting your game concept.
-- **Additional Game Elements**: Generate storylines, dialogues, game mechanics, and level designs.
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=streamlit&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat&logo=openai&logoColor=white)
+![Replicate](https://img.shields.io/badge/Replicate-000000?style=flat)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat)
 
-## 🎮 How to Use
-
-1. Enter your game concept in the "Game Concept" tab.
-2. Customize image generation settings in the "Image Generation" tab.
-3. Set script generation preferences in the "Script Generation" tab.
-4. Choose additional elements to generate in the "Additional Elements" tab.
-5. Click "Generate Game Plan" to create your game assets and documents.
-6. Review the generated content and download the complete package as a ZIP file.
-
-## 🛠️ AI Models
-
-- **Chat Models**: GPT-4, GPT-4o-mini, Llama
-- **Image Models**: DALL-E 3, SD Flux-1, SDXL Lightning
-- **Code Models**: GPT-4o, GPT-4o-mini, CodeLlama-34B
-
-Note: You'll need valid API keys for OpenAI and Replicate to use all features.
+</div>
 
 ---
 
-Created by [Daniel Sheils](http://linkedin.com/in/danielsheils/) | [GitHub](https://github.com/RhythrosaLabs/game-maker)
+The public development build of Game Maker — a Streamlit app that uses multiple AI models to generate everything you need to start building a game: game concepts, art assets, Unity C# scripts, 3D model conversions, storylines, music, and more. Package everything as a ZIP and start building.
 
+## ✨ Features
 
-## Support
+- **Game Concept Generation** — detailed game concepts, world designs, and character ideas
+- **Asset Creation** — DALL-E 3 + Stable Diffusion Flux images for characters, enemies, backgrounds, objects, sprites, UI
+- **Unity Script Generation** — C# scripts for player controllers, enemies, game objects, level backgrounds, CodeLlama-34B
+- **3D Model Conversion** — turn 2D images into 3D models for compatible asset types
+- **Music Generation** — background music and SFX fitting the game concept
+- **Additional Elements** — storylines, dialogues, game mechanics, level designs
+- **ZIP Export** — everything bundled and ready to use
 
-If you find this useful, consider supporting via [PayPal](https://paypal.me/noodlebake)
+## 🤖 AI Models
+
+| Type | Models |
+|---|---|
+| Chat | GPT-4, GPT-4o-mini, Llama |
+| Images | DALL-E 3, SD Flux-1, SDXL Lightning |
+| Code | GPT-4o, GPT-4o-mini, CodeLlama-34B |
+
+## 🚀 Quick Start
+
+```bash
+git clone https://github.com/RhythrosaLabs/game-maker-public-dev.git
+cd game-maker-public-dev
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Add your OpenAI and Replicate API keys in the sidebar.
+
+## 🛠️ Tech Stack
+
+- **Python + Streamlit** — web app UI
+- **OpenAI** — GPT models + DALL-E 3
+- **Replicate** — Stable Diffusion, Flux, CodeLlama
+
+## 🤝 Contributing
+
+PRs welcome. This is the public dev build — expect active changes.
+
+## 📄 License
+
+MIT
+
+## 💛 Support
+
+If Game Maker helps you build your game, consider supporting development:
+
+👉 [Donate via PayPal](https://paypal.me/noodlebake) — @noodlebake
+
+---
+<div align="center">Made with ❤️ by <a href="https://github.com/RhythrosaLabs">RhythrosaLabs</a></div>
