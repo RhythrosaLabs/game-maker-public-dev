@@ -32,3 +32,8 @@ Note: You'll need valid API keys for OpenAI and Replicate to use all features.
 ---
 
 Created by [Daniel Sheils](http://linkedin.com/in/danielsheils/) | [GitHub](https://github.com/RhythrosaLabs/game-maker)
+
+
+## Support
+
+If you find this useful, consider supporting via [PayPal](https://paypal.me/noodlebake)
