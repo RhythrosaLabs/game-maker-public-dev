@@ -40,7 +40,7 @@ The public development build of Game Maker — a Streamlit app that uses multipl
 git clone https://github.com/RhythrosaLabs/game-maker-public-dev.git
 cd game-maker-public-dev
 pip install -r requirements.txt
-streamlit run app.py
+streamlit run main.py
 ```
 
 Add your OpenAI and Replicate API keys in the sidebar.
